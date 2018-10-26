@@ -5,7 +5,15 @@ before_install:
   - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   - sudo apt-get update -qq
   - sudo apt-get install -y libgtest-dev
-  - sudo apt-get install -y g++-6
+  - sudo apt-get install -y g++-7
+  - sudo apt-get install -y cmake
+  - cd /usr/src/gtest
+  - sudo cmake CMakeLists.txt
+  - sudo make
+  - sudo cp *.a /usr/lib
+  - sudo mkdir /usr/local/lib/gtest
+  - sudo ln -s /usr/lib/libgtest.a /usr/local/lib/gtest/libgtest.a
+  - sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
 script:
  - make test
 
