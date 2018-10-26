@@ -14,7 +14,10 @@ before_install:
   - sudo mkdir /usr/local/lib/gtest
   - sudo ln -s /usr/lib/libgtest.a /usr/local/lib/gtest/libgtest.a
   - sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
+  - cd -
 script:
+ - pwd
+ - cd azazel7/OrpailleCC
  - make test
 
 after_success:
