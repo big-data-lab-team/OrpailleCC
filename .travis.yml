@@ -16,7 +16,6 @@ before_install:
   - sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
   - cd -
 script:
- - pwd
  - cd azazel7/OrpailleCC
  - make test
 

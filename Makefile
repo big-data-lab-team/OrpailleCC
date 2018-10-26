@@ -6,7 +6,9 @@ all: $(OBJECT)
 	g++ -std=c++11 main.cpp $(OBJECT) -o $(EXE)
 
 test: $(CPPOBJECT)
-	g++ -std=c++11 test.cpp $(CPPOBJECT) -o $(EXE)_test -fpermissive -lgtest
+	g++ -lgtest -std=c++11 test.cpp $(CPPOBJECT) -o $(EXE)_test -fpermissive
+
+run_test: test
 	./$(EXE)_test
 
 %.o: %.c
