@@ -1,17 +1,13 @@
 sudo: true
 os: linux
 language: cpp
-compiler: gcc
-dist: trusty
 before_install:
   - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   - sudo apt-get update -qq -y
-install:
-  - sudo apt-get install libgtest-dev -y
-  -	sudo apt-get install -qq g++-6
+  - sudo apt-get install -y libgtest-dev
+  -	sudo apt-get install -y g++-6
 script:
  - make test
-
 after_success:
   - echo "success"
 after_failure:
