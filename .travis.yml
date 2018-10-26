@@ -1,0 +1,11 @@
+install: make gtest
+language: cpp
+compiler: g++
+os:
+    - linux
+addons:
+	apt:
+	  sources:
+		- ubuntu-toolchain-r-test
+	  packages:
+		- g++-7
