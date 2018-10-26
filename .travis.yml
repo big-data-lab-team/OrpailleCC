@@ -1,11 +1,7 @@
-install: make gtest
+sudo: true
+os: linux
 language: cpp
-compiler: g++
-os:
-    - linux
-addons:
-	apt:
-	  sources:
-		- ubuntu-toolchain-r-test
-	  packages:
-		- g++-7
+before_install:
+  - sudo apt-get update -qq
+script:
+ - make test
