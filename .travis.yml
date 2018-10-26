@@ -18,6 +18,7 @@ before_install:
 script:
  - cd azazel7/OrpailleCC
  - make test
+ - make run_test
 
 after_success:
   - echo "success"
