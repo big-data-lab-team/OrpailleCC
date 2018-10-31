@@ -1,8 +1,13 @@
+#include <cstdlib>
 #include "gtest/gtest.h"
 #include "reservoir_sampling.hpp"
-
+struct random_lambda{
+	double operator()(void){
+		return (double)rand() / (double)RAND_MAX;
+	}
+};
 TEST(ReservoirSampling, Add) { 
-	ReservoirSampling<int, 100> rs;
+	ReservoirSampling<int, 100, random_lambda> rs;
 	int count[100] = {0};
 	for(int i = 0; i < 100; ++i)
 		rs.add(i);
@@ -16,7 +21,7 @@ TEST(ReservoirSampling, Add) {
 }
 
 TEST(ReservoirSampling, Distribution) { 
-	ReservoirSampling<int, 100> rs;
+	ReservoirSampling<int, 100, random_lambda> rs;
 	int pre_count[100] = {0};
 	int count[100] = {0};
 	pre_count[50] = 1000;
