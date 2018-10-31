@@ -6,7 +6,7 @@
  * The templates element_type indicate what type of element the class should sample, sample_size inidcate the size of the sample and random_function
  * give the class a random function that should uniformly return values between 0 and 1.
  */
-template<class element_type, unsigned int sample_size, typename random_function>
+template<class element_type, unsigned int sample_size, double (*random_function)()>
 class ReservoirSampling{
 	element_type sample[sample_size];
 	unsigned int counter = 0;
@@ -24,10 +24,16 @@ class ReservoirSampling{
 	 * @param e The new element to eventualy add to the sample.
 	 */
 	void add(element_type e){
-		double const threshold = 1.0 / (double)counter;
-		if(random() < threshold){
-			int const index = round(random() * sample_size);
-			sample[index] = e;
+		if(counter < sample_size){
+			sample[counter] = e;
+		}
+		else{
+			double const threshold = (double)sample_size / (double)counter;
+			double const rnd = random_function();
+			if(rnd < threshold){
+				int const index = round(random_function() * (sample_size-1));
+				sample[index] = e;
+			}
 		}
 		counter += 1;
 	}
