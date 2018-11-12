@@ -14,6 +14,7 @@ class ChainedReservoirSampling{
 		unsigned int timestamp;
 	};
 	node sample[sample_size];
+	//`next` is not inside the node structure because once next is used for a node, it is not used again
 	unsigned int next[sample_size] = {0};
 	unsigned int counter = 0;
 
@@ -31,7 +32,38 @@ class ChainedReservoirSampling{
 		//TODO improve this recursive code lazy boy -_-"
 		clear_chain(start->next);
 	}
+	void push_on_chain(node& head, element_type e, unsigned int const timestamp){
+		node& current = head;
+		int i = 0;
+		//The only thing that could make this loop forever is a corruption the linked list of node that loop over the same data without empty space.
+		while(i < 5000){ //`i` is just a security
+			if(current.next == NULL){
+				node* new_element = static_cast<node*>(funct::malloc(sizeof(node)));
+				assert(new_element != NULL);
+				new_element->next = NULL;
+				new_element->element = e;
+				new_element->timestamp = timestamp;
+				current.next = new_element;
+				return;
+			}
+			if(current.next->timestamp == 0){ // This cell is available
+				current.next->element = e;
+				current.next->timestamp = timestamp;
+				return;
+			}
+			current = (*current.next);
+			i += 1;
+		}
+		assert(false);
+		//TODO maybe clear the chain if it is corrupted
+	}
 	public:
+	ChainedReservoirSampling(){
+		for(struct node& current : sample){
+			current.next = NULL;
+			current.timestamp = 0;
+		}
+	}
 	/**
 	 * Sample one new element into the sample. This new element may not be added.
 	 * @param e The new element to eventualy add to the sample.
@@ -54,7 +86,12 @@ class ChainedReservoirSampling{
 				next[index] = counter + 1 + round(random_function() * (sample_size-1));
 			}
 		}
-		//TODO check next ?
+		//check `next`
+		for(int i = 0; i < sample_size; ++i){
+			if(counter == next[i]){
+				push_on_chain(sample[i], e, timestamp);
+			}
+		}
 		counter += 1;
 	}
 	/**
