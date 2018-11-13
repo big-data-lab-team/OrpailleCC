@@ -1,5 +1,8 @@
 #include <cmath>
 
+#include <iostream>
+using namespace std;
+
 /**
  * A class that implement the reservoir sampling algorithm.
  *
@@ -15,7 +18,7 @@ class ChainedReservoirSampling{
 	};
 	node sample[sample_size];
 	//`next` is not inside the node structure because once next is used for a node, it is not used again
-	unsigned int next[sample_size] = {0};
+	unsigned int next[sample_size];
 	unsigned int counter = 0;
 
 	/**
@@ -33,29 +36,49 @@ class ChainedReservoirSampling{
 		clear_chain(start->next);
 	}
 	void push_on_chain(node& head, element_type e, unsigned int const timestamp){
-		node& current = head;
+		node* current = &head;
 		int i = 0;
 		//The only thing that could make this loop forever is a corruption the linked list of node that loop over the same data without empty space.
 		while(i < 5000){ //`i` is just a security
-			if(current.next == NULL){
+			if(current->timestamp == 0){ // This cell is available
+				current->element = e;
+				current->timestamp = timestamp;
+				return;
+			}
+			if(current->next == NULL){
 				node* new_element = static_cast<node*>(funct::malloc(sizeof(node)));
 				assert(new_element != NULL);
 				new_element->next = NULL;
 				new_element->element = e;
 				new_element->timestamp = timestamp;
-				current.next = new_element;
+				current->next = new_element;
 				return;
 			}
-			if(current.next->timestamp == 0){ // This cell is available
-				current.next->element = e;
-				current.next->timestamp = timestamp;
-				return;
-			}
-			current = (*current.next);
+
+			current = current->next;
 			i += 1;
 		}
 		assert(false);
 		//TODO maybe clear the chain if it is corrupted
+	}
+	void shift_chain(node& head, node& current){
+		node& receiver = head;
+		node& mover = current;
+		while(1){//TODO add security
+			receiver.element = mover.element;
+			receiver.timestamp = mover.timestamp;
+			if(mover.next != NULL){
+				mover = *mover.next;
+				receiver = *receiver.next;
+			}
+			else
+				break;
+		}
+		//Once everything is shifted, disable all following cells
+		while(receiver.next != NULL){
+			receiver = *receiver.next;
+			receiver.timestamp = 0;
+		}
 	}
 	public:
 	ChainedReservoirSampling(){
@@ -63,6 +86,8 @@ class ChainedReservoirSampling{
 			current.next = NULL;
 			current.timestamp = 0;
 		}
+		for(int i = 0; i < sample_size; ++i)
+			next[i] = 4294967294; //`next` cannot be negative so to avoid 0 to be assign to all sample, I set it to the maximum
 	}
 	/**
 	 * Sample one new element into the sample. This new element may not be added.
@@ -90,6 +115,7 @@ class ChainedReservoirSampling{
 		for(int i = 0; i < sample_size; ++i){
 			if(counter == next[i]){
 				push_on_chain(sample[i], e, timestamp);
+				next[i] = counter + 1 + round(random_function() * (sample_size-1));
 			}
 		}
 		counter += 1;
@@ -107,6 +133,24 @@ class ChainedReservoirSampling{
 	 */
 	element_type& operator[](int const i) {
 		return sample[i].element;
+	}
+	/*
+	 * Declare a timestamp and all anterior timestamp obsolete
+	 * @param timestamp the timestamp to declare obsolete
+	 */
+	void obsolete(unsigned int const timestamp){
+		for(int i = 0; i < sample_size; ++i){
+			node& head = sample[i];
+			node* current = &head;
+
+			//TODO make sure nothing get out of the chain
+			while(current->timestamp < timestamp){
+				assert(current->next != NULL);
+				current = current->next;
+			}
+			if(&head != current)
+				shift_chain(head, *current);
+		}
 	}
 };
 
