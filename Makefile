@@ -1,6 +1,6 @@
 EXE=main
 OBJECT=
-CPPOBJECT=test_bloom.oo test_cuckoo.oo test_reservoir_sampling.cpp test_chained_reservoir.cpp #heap.oo cuckoo.oo 
+CPPOBJECT=test_bloom.oo test_cuckoo.oo test_reservoir_sampling.cpp test_chained_reservoir.cpp test_mc-nn.cpp #heap.oo cuckoo.oo 
 FLAGS=-g
 
 all: $(OBJECT) main.cpp
