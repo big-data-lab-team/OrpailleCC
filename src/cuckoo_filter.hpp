@@ -108,6 +108,7 @@ class CuckooFilter{
 		fingerprint_t fp = funct::fingerprint(e);
 		unsigned int h1 = funct::hash(e);
 		unsigned int h2 = h1 ^ funct::hash(fp);
+
 		bool inserted = false;
 		int i = 0;
 		do{

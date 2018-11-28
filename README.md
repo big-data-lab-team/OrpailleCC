@@ -9,5 +9,7 @@ To start using a feature, just include the header files in your project and comp
 
 To run the tests, you will need gtest:
 ```
-make test
+make run_test
 ```
+
+To build and run performance tests, exectute `make perf`.
