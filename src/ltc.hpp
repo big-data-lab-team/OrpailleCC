@@ -1,6 +1,3 @@
-#include <iostream>
-using namespace std;
-
 template<int epsilon, int max_value=32767, int min_value=-32768, int time_unit_difference=1>
 class LTC{
 	struct data_point{
