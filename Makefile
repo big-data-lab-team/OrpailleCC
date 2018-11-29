@@ -7,7 +7,7 @@ CPPOBJECT=$(TEST_DIR)/test_bloom.oo\
 		  $(TEST_DIR)/test_reservoir_sampling.oo\
 		  $(TEST_DIR)/test_chained_reservoir.oo\
 		  $(TEST_DIR)/test_ltc.oo\
-		  $(TEST_DIR)/test_mc-nn.oo 
+		  $(TEST_DIR)/test_mc_nn.oo 
 FLAGS=-g
 FLAGS_PERF=-O3
 
@@ -21,7 +21,7 @@ perf: $(OBJECT)
 	g++ -I$(SRC_DIR) -std=c++11 main-performance.cpp $(OBJECT) $(FLAGS_PERF) -o $(EXE)-perf
 
 run_test: test
-	./$(EXE)_test
+	./$(EXE)-test
 
 %.o: %.c
 	gcc -std=c99 $< -c -o $@

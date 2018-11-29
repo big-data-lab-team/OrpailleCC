@@ -1,3 +1,5 @@
+#include <iostream>
+using namespace std;
 
 template<int epsilon, int max_value=32767, int min_value=-32768, int time_unit_difference=1>
 class LTC{
@@ -5,7 +7,8 @@ class LTC{
 		int timestamp;
 		int value;
 	};
-	data_point last_transmit_point, UL, LL, new_ul, new_ll, last_data_point;
+	data_point last_transmit_point, UL, LL, new_ul, new_ll, to_transmit;
+
 	int counter = 0; //Counter make sure the algorithm does not fail for the first 3 values
 
 	template<typename K>
@@ -53,20 +56,10 @@ class LTC{
 	}
 	void get_value_to_transmit(int& timestamp, int& value){
 		//Set the return value
-		timestamp = last_transmit_point.timestamp;	
-		value = last_transmit_point.value;	
-
-		//Update the last_transmit_point
-		int tmp_param = (UL.value + LL.value) / 2;
-		last_transmit_point.timestamp = last_data_point.timestamp - 1;
-		last_transmit_point.value = tmp_param;
-
-		counter = 1;
-		add(last_data_point.timestamp, last_data_point.value);
+		timestamp = to_transmit.timestamp;	
+		value = to_transmit.value;	
 	}
 	int add(int const timestamp, int const value) {
-		last_data_point.value = value;
-		last_data_point.timestamp = timestamp;
 		if(counter == 0){
 			last_transmit_point.timestamp = timestamp;
 			last_transmit_point.value = value;
@@ -79,10 +72,19 @@ class LTC{
 			counter = 2;
 			return false; //Nothing to compute because there is still not enough values
 		}
+
 		bool n = need_transmit();	
 		if(!n)
 			set_ul_and_ll();
-
+		else{
+			to_transmit = last_transmit_point;
+			//Update the last_transmit_point
+			int tmp_param = (UL.value + LL.value) / 2;
+			last_transmit_point.timestamp = timestamp - 1;
+			last_transmit_point.value = tmp_param;
+			counter = 1;
+			add(timestamp, value);
+		}
 		return n;
 	}
 };
