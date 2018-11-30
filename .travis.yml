@@ -16,7 +16,9 @@ before_install:
   - sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
   - cd -
 script:
- - make test
+ - make run_test
+ - make perf
+ - ./main-perf
 
 after_success:
   - echo "success"
