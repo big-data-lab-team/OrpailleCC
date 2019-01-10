@@ -1,23 +1,35 @@
 #include <iostream>
+#include <cmath>
+//https://github.com/mahmoodshakir/Micro-Cluster-Nearest-Neighbour-MC-NN-Algorithm
 using namespace std;
 template<class feature_type, unsigned int feature_count, unsigned int max_cluster=25,unsigned int error_threshold=2, int performance_thr=50, int empty_class=-1>
 class MCNN{
+	//Define an internal definition of a micro-cluster
 	struct cluster{
-		feature_type features_square_sum[feature_count];
-		feature_type features_sum[feature_count];
-		double timestamp_square_sum;
-		double timestamp_sum;
+		feature_type features_square_sum[feature_count];//CF2X
+		feature_type features_sum[feature_count];//CF1X
+		double timestamp_square_sum; //CF2T
+		double timestamp_sum; //CF1T
 		unsigned int data_count;
 		int label;
 		int error_count;
 		double initial_timestamp;
-		double sqrt_local(double const val) const{
-			return 0.0;
+		void print(void){
+			cout << "Class: " << label << "\tError count: " << error_count << "/" << error_threshold << "\tCount: " << data_count << "\t";
+			if(feature_count < 7){
+				feature_type cent[feature_count];
+				centroid(cent);
+				cout << "[";
+				for(int i = 0; i < feature_count-1; ++i)
+					cout << cent[i] << ", ";
+				cout << cent[feature_count-1] << "]";
+			}
+			cout << endl;
 		}
 		double variance(unsigned int const features_idx) const{
-			double const a = features_square_sum[features_idx] / data_count;
-			double const b = features_sum[features_idx] / data_count;
-			double const ret=sqrt_local(a - b*b);
+			double const a = (double)features_square_sum[features_idx] / (double)data_count; //CF2X
+			double const b = (double)features_sum[features_idx] / (double)data_count; //CF1X
+			double const ret=a - b*b;
 			return ret;
 		}
 		void incorporate(feature_type const* features, double const timestamp){
@@ -69,17 +81,24 @@ class MCNN{
 			return *this;
 		}
 	};
+
+	//An array with the maximum number of micro-cluster available
 	cluster clusters[max_cluster];
+	//An array to check if the cluster *i* is active of empty. note: we can use false to set the array because false == 0.
 	bool active[max_cluster] = {false};
+	//Count the number of cluster active
 	int count_active_cluster = 0;
 	double timestamp = 0;
 
+	//The triangular function
 	template<class type>
 	double triangular_number(type t) const{
 		return ((t*t + t) * 0.5);
 	}
 
+	//Function to split a cluster
 	void split(int const cluster_idx){
+		cout << "Split" << endl;
 		int new_idx = -1;
 		for(int i = 0; i < max_cluster; ++i){
 			if(!active[i] && i != cluster_idx){
@@ -91,31 +110,39 @@ class MCNN{
 			//TODO what to do when there is no more space :]
 		}
 
-		//Choose the attribute with the greatest variance
+		//Choose the attribute with the greatest variance, then do the split on it
 		double highest_variance = 0;
-		unsigned int best_idx_variance = -1;
+		unsigned int split_index = -1;
 		for(int i = 0; i < feature_count; ++i){
 			double const variance = clusters[cluster_idx].variance(i);
-			if(variance > highest_variance){
+			if(variance > highest_variance || split_index == -1){
 				highest_variance = variance;
-				best_idx_variance = i;
+				split_index = i;
 			}
 		}
+		highest_variance = sqrt_local(highest_variance);
+		//Create two separate feature data points based on the centroid of the original cluster
+		feature_type cluster_minus[feature_count], cluster_plus[feature_count];
+		for(int i = 0; i < feature_count; ++i){
+			cluster_minus[i] = cluster_plus[i] = clusters[cluster_idx].features_sum[i] / clusters[cluster_idx].data_count;
+		}
 
+		//Update the spliting attribut
+		cluster_minus[split_index] -= highest_variance;
+		cluster_plus[split_index] += highest_variance;
+		cout << "Variance: " << highest_variance << " (" << split_index << ")" << endl;
+		cout << "[" << cluster_minus[0] <<"," << cluster_minus[1] <<"]" << endl;
+		cout << "[" << cluster_plus[0] <<"," << cluster_plus[1] <<"]" << endl;
 
-		clusters[new_idx]=clusters[cluster_idx];
-		feature_type centroid[feature_count];
-		clusters[cluster_idx].centroid(centroid);
+		//TODO: round somehow
+		int old_time = (clusters[cluster_idx].timestamp_sum / clusters[cluster_idx].data_count);
 
-		//clusters[new_idx].initial_timestamp = clusters[cluster_idx].initial_timestamp = 0;
-		//clusters[new_idx].timestamp_sum = clusters[cluster_idx].timestamp_sum = 0;
-		//clusters[new_idx].timestamp_square_sum = clusters[cluster_idx].timestamp_square_sum = 0;
-		//
-		//
-		//clusters[new_idx].features_sum
-
-
+		clusters[new_idx].initialize(cluster_minus, clusters[cluster_idx].label, old_time);
+		clusters[cluster_idx].initialize(cluster_plus, clusters[cluster_idx].label, old_time);
+		active[new_idx] = true;
+		count_active_cluster += 1;
 	}
+	//Compute the squared distance between two data point
 	double euclidean_distance(feature_type const* e1, feature_type const* e2) const{
 		double squared_sum = 0;
 		for(int i = 0; i < feature_count; ++i)
@@ -123,19 +150,24 @@ class MCNN{
 		//NOTE: Not really a distance :D
 		return squared_sum;
 	}
-	void find_nearest_clusters(feature_type const* features, int const label, int& nearest, int& nearest_with_class){
+	//Find the nearest cluster as well as the nearest cluster with the same class given a data point
+	void find_nearest_clusters(feature_type const* features, int const label, int& nearest, int& nearest_with_class) const{
+		//First find the nearest cluster
 		find_nearest_clusters(features, nearest);
+		//If it turns out the nearest was the one with the same label, just return both
 		if(nearest >= 0 && clusters[nearest].label == label){
 			nearest_with_class = nearest;
 			return;
 		}
-
+		//Otherwise, we have to found it.
 		feature_type centroid[feature_count];
 		int nearest_cluster = -1;
 		double shortest_distance = 1000000;
 		for(int cluster_idx = 0; cluster_idx < max_cluster; ++cluster_idx){
+			//Only check the distance with the cluster with the same label.
 			if(!active[cluster_idx] || clusters[cluster_idx].label != label)
 				continue;
+			//NOTE: finding both the nearest and the nearest with class could be done in one pass, but I choose to use 2 different functions to make it clearer.
 			clusters[cluster_idx].centroid(centroid);
 			double const distance = euclidean_distance(features, centroid);
 			if(distance < shortest_distance){
@@ -145,23 +177,43 @@ class MCNN{
 		}
 		nearest_with_class = nearest_cluster;
 	}
-	void find_nearest_clusters(feature_type const* features, int& nearest){
+	//Find the nearest cluster given a data point
+	void find_nearest_clusters(feature_type const* features, int& nearest) const{
 		feature_type centroid[feature_count];
 		int nearest_cluster = -1;
 		double shortest_distance = 1000000;
+		//Loop over the clusters
 		for(int cluster_idx = 0; cluster_idx < max_cluster; ++cluster_idx){
+			//If the cluster is empty, skip it
 			if(!active[cluster_idx])
 				continue;
+			//Compute the centroid of the cluster
 			clusters[cluster_idx].centroid(centroid);
+			//Compute the squared euclidean distance
 			double const distance = euclidean_distance(features, centroid);
 			if(distance < shortest_distance){
 				nearest_cluster = cluster_idx;
 				shortest_distance = distance;
 			}
 		}
+		//NOTE: we should always have a nearest cluster except for the first data point.
 		nearest = nearest_cluster;
 	}
+	//The sqrt implementation if needed.
+	double sqrt_local(double const val) const{
+		return sqrt(val); //TODO: to change
+	}
 	public:
+	void print(void){
+		cout << "\t=== MCNN ===" << endl;
+		cout << "Active clusters: " << count_active_cluster << endl;
+		cout << "Timestamp: " << timestamp << endl;
+		for(int i = 0; i < max_cluster; ++i)
+			if(active[i]){
+				cout << "Cluster " << i << " - ";
+				clusters[i].print();
+			}
+	}
 	void train(feature_type const* features, int const label){
 		assert(features != NULL);
 		//Find the nearest neighbor
@@ -173,13 +225,14 @@ class MCNN{
 			for(int i = 0; i < max_cluster; ++i){
 				if(active[i] == false){
 					active[i] = true;
+					count_active_cluster += 1;
 					clusters[i].initialize(features, label, timestamp);
 					return;
 				}
 			}
 			//If we are here, there was already `max_cluster` clusters active.
 			//TODO don't know what to do
-			printf("There is not enough cluster for all classes.\n");
+			printf("There is not enough cluster for all classes.\nGet back later\n");
 			assert(false);
 		}
 		//Get the cluster
@@ -207,7 +260,7 @@ class MCNN{
 			}
 		}
 	}
-	int predict(feature_type const* features){
+	int predict(feature_type const* features) const{
 		assert(features != NULL);
 		int nearest_index = -1;
 		find_nearest_clusters(features, nearest_index);
@@ -215,5 +268,8 @@ class MCNN{
 			return empty_class;
 		assert(nearest_index < max_cluster);
 		return clusters[nearest_index].label;
+	}
+	int count_clusters(void) const{
+		return count_active_cluster;
 	}
 };
