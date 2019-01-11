@@ -7,7 +7,7 @@
 \usepackage[lofdepth,lotdepth]{subfig}
 
 \title{Library for Embedded Datastream Algorithm}
-\author{Martin}
+\author{Martin, Tristan}
 \begin{document}
 \maketitle
 \section{Summary}
@@ -18,9 +18,11 @@ device.
 
 OrpailleCC provide a collection of data stream algorithms developed to be
 deploy on embeded device.  All these algorithms rely as little as possible on
-operating system related functions such as malloc.  Otherwise, the algorithm
-rely on parameters so the user is able to provide the function for the
+operating system related functions such as malloc. Otherwise, the algorithm
+rely on template parameters so the user is able to provide the function for the
 corresponding environment.
+All algorithms initially target FreeRTOS \cite{freertos} but they should work
+on any micro-controller with a C++11 compiler. 
 
 The repository includes a wide variaty of algorithms ranging from compression
 algorithm to machine learning algorithms:
