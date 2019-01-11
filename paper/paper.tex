@@ -6,10 +6,18 @@
 \usepackage{caption}
 \usepackage[lofdepth,lotdepth]{subfig}
 
-\title{Library for Embeded Datastream Algorithm}
+\title{Library for Embedded Datastream Algorithm}
 \author{Martin}
 \begin{document}
 \maketitle
+\section{Summary}
+Given the increasing number of streaming devices, it has become interesting to offload 
+stream mining technique onto these devices rather than waiting for the stream to reach the cloud.
+OrpailleCC provide a collection of data stream algorithms developed to be deploy on embeded device.
+
+The repository includes a wide variaty of algorithms ranging from compression \cite{ltc} to machine learning \cite{mc-nn} algorithms.
+A more detailled list is available in the repository.
+
 %*** Embracing the hack
 %In the long term we should move away from closed/proprietary solutions such as Scopus and Web of Science that primarily track papers and their citations, and instead move to tools that can track things without DOIs such as //depsy.org. However, that's the long-term fix, and not the one that helps research software engineers and researchers who are already spending significant amounts of time writing code today.
 
@@ -29,4 +37,6 @@
 %Not at all. Remember, software papers are just advertising and JOSS "papers" are essentially just abstracts that point to a software repository. The primary purpose of a JOSS paper is to enable citation credit to be given to authors of research software.
 
 %We're also not going to let just any old software through: JOSS has a rigorous peer review process and a first-class editorial board highly experienced at building (and reviewing) high-quality research software.
+\bibliographystyle{plain}
+\bibliography{paper}
 \end{document}
