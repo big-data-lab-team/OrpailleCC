@@ -18,6 +18,7 @@ To run the unit tests, run the command `make run_test`.
 *** Performance
 To run a performance test on your laptop, compile the performance tests with
 `make perf` then run `./main-perf`.
+
 ![Alt](/figures/performance.png "An example of the performance output")
 
 * List of Algorithms
@@ -28,3 +29,17 @@ To run a performance test on your laptop, compile the performance tests with
 - Chained Reservoir Sampling
 - Bloom Filter
 - Cuckoo Filter
+
+* Example
+** Lightweight Temporal Compression
+Add example
+** Micro-Cluster Nearest Neighbour
+Add example
+** Reservoir Sampling
+Add example
+** Chained Reservoir Sampling
+Add example
+** Bloom Filter
+Add example
+** Cuckoo Filter
+Add example
