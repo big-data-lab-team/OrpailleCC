@@ -11,13 +11,27 @@
 \begin{document}
 \maketitle
 \section{Summary}
-Given the increasing number of streaming devices, it has become interesting to offload 
-stream mining technique onto these devices rather than waiting for the stream to reach the cloud.
-OrpailleCC provide a collection of data stream algorithms developed to be deploy on embeded device.
+Given the increasing number of streaming devices, it has become interesting to
+offload stream mining technique onto these devices. Mining the stream before it
+reach the cloud can help improve the energy efficiency or the privacy of the
+device.
 
-The repository includes a wide variaty of algorithms ranging from compression \cite{ltc} to machine learning \cite{mc-nn} algorithms.
-A more detailled list is available in the repository.
+OrpailleCC provide a collection of data stream algorithms developed to be
+deploy on embeded device.  All these algorithms rely as little as possible on
+operating system related functions such as malloc.  Otherwise, the algorithm
+rely on parameters so the user is able to provide the function for the
+corresponding environment.
 
+The repository includes a wide variaty of algorithms ranging from compression
+algorithm to machine learning algorithms:
+\begin{itemize}
+	\item Lightweight Temporal Compression \cite{ltc}
+	\item Micro-Cluster Nearest Neighbour \cite{mc-nn}
+	\item Reservoir Sampling \cite{reservoir_sampling}
+	\item Chained Reservoir Sampling \cite{chained_reservoir_sampling}
+	\item Bloom Filter \cite{bloom}
+	\item Cuckoo Filter \cite{cuckoo_filter}
+\end{itemize}
 %*** Embracing the hack
 %In the long term we should move away from closed/proprietary solutions such as Scopus and Web of Science that primarily track papers and their citations, and instead move to tools that can track things without DOIs such as //depsy.org. However, that's the long-term fix, and not the one that helps research software engineers and researchers who are already spending significant amounts of time writing code today.
 
