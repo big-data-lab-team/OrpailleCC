@@ -4,6 +4,7 @@
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{caption}
+\usepackage{xcolor}
 \usepackage[lofdepth,lotdepth]{subfig}
 
 \title{Library for Embedded Datastream Algorithm}
@@ -11,30 +12,30 @@
 \begin{document}
 \maketitle
 \section{Summary}
-%Why c++?
-%interesting -> more accurate
-%Intro plus détaillée
-%Détailler FreeRTOS
-%œ
-Given the increasing number of streaming devices, it has become interesting to
-offload stream mining techniques onto these devices. Formerly, connected
-devices forwarded their data to a data center where they would be mined
-offline.  However, Mining the stream before it leaves the device could help
-improving several aspects of the Internet of Thing. Indeed, energy efficiency
-can be improved by only forwarding the relevant data and thus saving
-communication time. The privacy can be ensured by guaranteeing that the data that
-identify a user would never leave the device. Only the mined data would be sent
-to the cloud.
+Given the increasing number of streaming devices~\cite{growing-iot}, it has
+become \textcolor{red}{interesting} to offload stream mining techniques onto
+these devices.  Formerly, connected devices forwarded their data to a data
+center where they would be mined offline.  However, Mining the stream before it
+leaves the device could help improving several aspects of the Internet of
+Thing. Indeed, energy efficiency can be improved by only forwarding the
+relevant data and thus saving communication time. The privacy can be ensured by
+guaranteeing that the data that identify a user would never leave the device.
+Only the mined data would be sent to the cloud.
 
 OrpailleCC provides a consistent collection of data stream algorithms developed
-to be deployed on embedded devices.  All these algorithms rely as little as
-possible on operating system related functions such as malloc. When algorithms
-could not be implemented otherwise, the library would introduce template
-parameters to get the required functions from the user.  All algorithms
-initially targeted FreeRTOS \cite{freertos}, a real-time operating system used
-in embedded systems, but they should work on any micro-controller with a C++11
-compiler. The programming language was chosen for its performance as well as
-its popularity in the field.
+to be deployed on embedded devices. Even though gathering implementations in a
+library would facilitate comparison and benchmarking, the main objective of
+OrpailleCC it to enable embedded programmers to use out-of-the-box algorithms
+with an efficient implementation.  The library goal for the future is to be
+extended with new reliable algorithms to widely cover as many common problems
+as possible.  All the actual implementations rely as little as possible on
+operating system related functions such as malloc. When algorithms could not be
+implemented otherwise, the library would introduce template parameters to get
+the required functions from the user.  All algorithms initially targeted
+FreeRTOS \cite{freertos}, a real-time operating system used in embedded
+systems, but they should work on any micro-controller with a C++11 compiler.
+The programming language was chosen for its performance as well as its
+popularity in the field.
 
 OrpailleCC addresses classes of problems discussed in \cite{kejariwal2015}. Two
 common classes are the \textit{Sampling} and the \textit{Filtering}.  The
@@ -55,8 +56,6 @@ catching concept drift.  On the other hand, the Lightweight Temporal
 Compression \cite{ltc} and a multi-dimensional variant \cite{ltcd} are two
 methods to compress data streams.
 
-The goal of OrpailleCC is to keep including new reliable algorithms to widely
-cover as many classes of problems as possible.
 \bibliographystyle{plain}
 \bibliography{paper}
 \end{document}
