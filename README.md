@@ -9,6 +9,8 @@ project.
 
 # Get started
 ## Hello World
+Let run a basic example with a Reservoir sampling.
+Save the following code in *testy.cpp*.
 ```cpp
 #include <iostream> //Included for cout
 #include "reservoir_sampling.hpp"
@@ -30,8 +32,11 @@ int main(){
 }
 ```
 
+Then compile it with your favorite C++ compiler and run it.
 ```bash
-g++ -I./src -std=c++11 testy.cpp -o testy
+$ g++ -I./src -std=c++11 testy.cpp -o testy
+$ ./testy
+Hll
 ```
 ## Use the library in your project
 Simply pick the code you need and add to your project.  You also need to add
