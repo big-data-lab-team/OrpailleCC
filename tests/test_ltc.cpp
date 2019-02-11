@@ -5,7 +5,7 @@
 
 
 TEST(LTC, Basic) { 
-	LTC<3> comp;
+	LTC<int, int, 3> comp;
 	int first_value;
 	for(int i = 0; i < 20; ++i){
 		int const val = 10 + ((rand()%3) - 1);
@@ -21,7 +21,7 @@ TEST(LTC, Basic) {
 	EXPECT_EQ (first_value, value);
 }
 TEST(LTC, Perfect) { 
-	LTC<3> comp;
+	LTC<int, int, 3> comp;
 	int count_compress = 0;
 	for(int i = 0; i < 400; ++i){
 		bool a = comp.add(i, i);
@@ -31,7 +31,7 @@ TEST(LTC, Perfect) {
 	EXPECT_EQ (0, count_compress); //It is one line only, so ltc should never break the line
 }
 TEST(LTC, Linear) {
-	LTC<3> comp;
+	LTC<int, int, 3> comp;
 	int count_compress = 0;
 	for(int i = 0; i < 1100; ++i){
 		bool a = comp.add(i, i%200);
@@ -42,7 +42,7 @@ TEST(LTC, Linear) {
 	EXPECT_TRUE (count_compress > 5); //There is 5 lines (1100 / 200)
 }
 TEST(LTC, Cos) { 
-	LTC<3> comp;
+	LTC<int, int, 3> comp;
 	int count_compress = 0;
 	for(int i = 0; i < 1100; ++i){
 		int val = round(cos(i*0.1) * 20);
@@ -54,8 +54,8 @@ TEST(LTC, Cos) {
 	EXPECT_TRUE (count_compress > 4); //More than 4 because there is roughly 4 linear lines in this function
 }
 TEST(LTC, Compression_level) { 
-	LTC<3> comp3;
-	LTC<5> comp5;
+	LTC<int, int, 3> comp3;
+	LTC<int, int, 5> comp5;
 	int count_3 = 0, count_5 = 0;
 	for(int i = 0; i < 1100; ++i){
 		int val = round(cos(i*0.1) * 20);

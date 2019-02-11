@@ -1,8 +1,8 @@
-template<int epsilon, int max_value=32767, int min_value=-32768, int time_unit_difference=1>
+template<class element_type, class timestamp_type, int epsilon, int max_value=32767, int min_value=-32768, int time_unit_difference=1>
 class LTC{
 	struct data_point{
-		int timestamp;
-		int value;
+		timestamp_type timestamp;
+		element_type value;
 	};
 	data_point last_transmit_point, UL, LL, new_ul, new_ll, to_transmit;
 
@@ -24,7 +24,7 @@ class LTC{
 		UL = new_ul;
 		LL = new_ll;
 	}
-	void update(int const timestamp, int const value){
+	void update(timestamp_type const timestamp, element_type const value){
 		new_ul.timestamp = timestamp;
 		new_ul.value = min(value + epsilon, max_value);
 		new_ll.timestamp = timestamp;
@@ -51,12 +51,12 @@ class LTC{
 	public:
 	LTC(){
 	}
-	void get_value_to_transmit(int& timestamp, int& value){
+	void get_value_to_transmit(timestamp_type& timestamp, element_type& value){
 		//Set the return value
 		timestamp = to_transmit.timestamp;	
 		value = to_transmit.value;	
 	}
-	int add(int const timestamp, int const value) {
+	int add(timestamp_type const timestamp, element_type const value) {
 		if(counter == 0){
 			last_transmit_point.timestamp = timestamp;
 			last_transmit_point.value = value;
@@ -76,7 +76,7 @@ class LTC{
 		else{
 			to_transmit = last_transmit_point;
 			//Update the last_transmit_point
-			int tmp_param = (UL.value + LL.value) / 2;
+			element_type tmp_param = (UL.value + LL.value) / 2;
 			last_transmit_point.timestamp = timestamp - 1;
 			last_transmit_point.value = tmp_param;
 			counter = 1;
