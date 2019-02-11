@@ -112,6 +112,69 @@ int main(){
 ## Chained Reservoir Sampling
 Add example
 ## Bloom Filter
-Add example
+```cpp
+#include "bloom_filter.hpp"
+
+#define BLOOM_FILTER_SIZE 600
+unsigned int hash_int(int* element){
+	return (*element)%BLOOM_FILTER_SIZE;
+}
+int main(){
+	auto p = hash_int;
+	/*Instanciate a BloomFilter object:
+		- The element type taken as input (int)
+		- The size (in bit) of the filter
+		- The number of hash function to use
+	With p containing the hash function.
+	*/
+	BloomFilter<int, BLOOM_FILTER_SIZE, 1> bf(&p);
+	//Add 3 element to the filter
+	bf.add(10);
+	bf.add(7);
+	bf.add(73);
+	std::cout << "Element accepted by the bloom filter: ";
+	for(int i = 0; i < 100; ++i){
+		if(bf.lookup(i)){
+			std::cout << i << " ";
+		}
+	}
+	std::cout << std::endl;
+}
+```
 ## Cuckoo Filter
-Add example
+```cpp
+#include "cuckoo_filter.hpp"
+
+#define CUCKOO_BUCKET_COUNT 32
+#define CUCKOO_ENTRY_BY_BUCKET 6
+#define CUCKOO_ENTRY_SIZE 3
+struct funct_cuckoo{
+	static unsigned char fingerprint(int const* e){
+		//mod 7 == value between 0 and 6, +1 == value between 1 and 7, so the empty value (0x0) is avoided
+		return ((*e)%7)+1; 
+	}
+	static unsigned int hash(int const* e){
+		return (*e)%CUCKOO_BUCKET_COUNT;		
+	}
+	/*
+	 * Make the combination of hash element and hash fingerprint does not lead to the same value
+	 * Hash of fingerprint should probably not return a 0 or a 2^CUCKOO_ENTRY_SIZE-1 because it create same h1 and h2
+	 */
+	static unsigned int hash(unsigned char fingerprint){
+		return (fingerprint * 7)%CUCKOO_BUCKET_COUNT;
+	}
+};
+void test_cuckoo(void) { 
+	CuckooFilter<int, CUCKOO_BUCKET_COUNT, CUCKOO_ENTRY_BY_BUCKET, CUCKOO_ENTRY_SIZE, funct_cuckoo, randy> cf;
+	cf.add(10);
+	cf.add(7);
+	cf.add(73);
+	std::cout << "Element accepted by the cuckoo filter: ";
+	for(int i = 0; i < 100; ++i){
+		if(cf.lookup(i)){
+			std::cout << i << " ";
+		}
+	}
+	std::cout << std::endl;
+}
+```
