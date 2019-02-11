@@ -22,7 +22,7 @@ double randy(void){ //We need this function to provide a random number to Reserv
 int main(){
 	char hello[] = "Hello-world!"; //Create a stream
 	ReservoirSampling<char, 3, randy> rs; //Instanciate a ReservoirSampling instance
-										  //This instance works with char, contains a reservoir of size 3 and  use the randy function to generate random numbers.
+	//This instance works with char, contains a reservoir of size 3 and  use the randy function to generate random numbers.
 	for(int j = 0; j < 12; ++j) //Feed the ReservoirSampling instance with every element of the stream (here letters of the string)
 		rs.add(hello[j]);
 	for(int j = 0; j < 3; ++j) //Print every element in the reservoir
@@ -65,12 +65,50 @@ To run a performance test on your laptop, compile the performance tests with
 - Cuckoo Filter
 
 # Example
-## Lightweight Temporal Compression
-Add example
+## Lightweight Temporal Compression (LTC)
+To use the LTC object, you need to include the header `ltc.hpp`.
+```cpp
+#include "ltc.hpp"
+
+int main(){
+	LTC<int, int, 3> comp; //Instanciate an LTC object that works with integer as element, and integer as timestamp.
+	//The epsilon is set to 3. 
+	for(int i = 0; i < 10000; ++i){ //10000 points are added sequentially.
+		//The add function return true, if the new point cannot be compressed with the previous ones and thus needs to be transmitted.
+		bool need_transmission = comp.add(i, i%200);
+		if(need_transmission){
+			int timestamp, value;
+			//the function get_value_to_transmit fetch the next datapoint to send and stores it into timestamp and value.
+			comp.get_value_to_transmit(timestamp, value);
+			// ... Execute the transmission or store the point.
+		}
+	}
+}
+```
 ## Micro-Cluster Nearest Neighbour
 Add example
 ## Reservoir Sampling
-Add example
+The next example is the one used as a hello world example.
+```cpp
+#include <iostream> //Included for cout
+#include "reservoir_sampling.hpp"
+
+double randy(void){ //We need this function to provide a random number to ReservoirSampling.
+	return (double)rand() / (double)RAND_MAX; //On systems without rand, the programmer will have to define a pseudo-random function.
+}
+
+int main(){
+	char hello[] = "Hello-world!"; //Create a stream
+	ReservoirSampling<char, 3, randy> rs; //Instanciate a ReservoirSampling instance
+    //This instance works with char, contains a reservoir of size 3 and  use the randy function to generate random numbers.
+	for(int j = 0; j < 12; ++j) //Feed the ReservoirSampling instance with every element of the stream (here letters of the string)
+		rs.add(hello[j]);
+	for(int j = 0; j < 3; ++j) //Print every element in the reservoir
+		std::cout << rs[j];
+	std::cout << std::endl;
+	return 0;
+}
+```
 ## Chained Reservoir Sampling
 Add example
 ## Bloom Filter
