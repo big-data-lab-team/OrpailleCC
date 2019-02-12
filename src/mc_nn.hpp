@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 #include <cmath>
 //https://github.com/mahmoodshakir/Micro-Cluster-Nearest-Neighbour-MC-NN-Algorithm
 using namespace std;
@@ -214,7 +215,7 @@ class MCNN{
 				clusters[i].print();
 			}
 	}
-	void train(feature_type const* features, int const label){
+	bool train(feature_type const* features, int const label){
 		assert(features != NULL);
 		//Find the nearest neighbor
 		//Find the nearest neighbor with the same class
@@ -227,13 +228,12 @@ class MCNN{
 					active[i] = true;
 					count_active_cluster += 1;
 					clusters[i].initialize(features, label, timestamp);
-					return;
+					return true;
 				}
 			}
 			//If we are here, there was already `max_cluster` clusters active.
 			//TODO don't know what to do
-			printf("There is not enough cluster for all classes.\nGet back later\n");
-			assert(false);
+			return false;
 		}
 		//Get the cluster
 		cluster& nearest = clusters[nearest_index];
