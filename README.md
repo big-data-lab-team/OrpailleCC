@@ -86,7 +86,45 @@ int main(){
 }
 ```
 ## Micro-Cluster Nearest Neighbour
-Add example
+```cpp
+#include <iostream> //Included for cout
+#include "mc_nn.hpp"
+
+#define MCNN_FEATURE_COUNT 2
+int main(){
+	int const dataset_size = 9;
+	/*Instanciate a MCNN classifier that uses:
+		- double as features
+		- which consider two features (MCNN_FEATURE_COUNT)
+		- That uses 10 clusters at most
+	*/
+	MCNN<double, MCNN_FEATURE_COUNT, 10> classifier;
+	//Initialize a fake dataset
+	double dataset[][MCNN_FEATURE_COUNT] = 
+						   {{ 0,  0},
+							{ 1,  1},
+							{ 8,  1},
+							{ 1,  8},
+							{ 7,  2},
+							{ 2,  8},
+							{-1,  0},
+							{ 1,  0},
+							{ 7, -1}};
+	int labels[] = {1, 1, 2, 2,2,2,1,1,2};
+
+	//Train the classifier
+	for(int i = 0; i < dataset_size; ++i){
+		classifier.train(dataset[i], labels[i]);
+	}
+	double test1[MCNN_FEATURE_COUNT] = {8, 0};
+	double test2[MCNN_FEATURE_COUNT] = {-1, -1};
+	int prediction1 = classifier.predict(test1);
+	int prediction2 = classifier.predict(test2);
+	std::cout << "Prediction { 8,  0} :" << prediction1 << std::endl;
+	std::cout << "Prediction {-1, -1} :" << prediction2 << std::endl;
+	return 0;
+}
+```
 ## Reservoir Sampling
 The next example is the one used as a hello world example.
 ```cpp
@@ -113,9 +151,10 @@ int main(){
 Add example
 ## Bloom Filter
 ```cpp
+#include <iostream> //Included for cout
 #include "bloom_filter.hpp"
 
-#define BLOOM_FILTER_SIZE 600
+#define BLOOM_FILTER_SIZE 50
 unsigned int hash_int(int* element){
 	return (*element)%BLOOM_FILTER_SIZE;
 }
@@ -141,14 +180,20 @@ int main(){
 	std::cout << std::endl;
 }
 ```
+Note that, due to the Bloom Filter size, more than three elements will be recognized by the filter.
+
 ## Cuckoo Filter
 ```cpp
+#include <iostream> //Included for cout
 #include "cuckoo_filter.hpp"
 
 #define CUCKOO_BUCKET_COUNT 32
 #define CUCKOO_ENTRY_BY_BUCKET 6
 #define CUCKOO_ENTRY_SIZE 3
+
+//This structure contains functions for the cuckoo filter.
 struct funct_cuckoo{
+	//The finger print function should return 
 	static unsigned char fingerprint(int const* e){
 		//mod 7 == value between 0 and 6, +1 == value between 1 and 7, so the empty value (0x0) is avoided
 		return ((*e)%7)+1; 
@@ -164,7 +209,10 @@ struct funct_cuckoo{
 		return (fingerprint * 7)%CUCKOO_BUCKET_COUNT;
 	}
 };
-void test_cuckoo(void) { 
+double randy(void){ //We need this function to provide a random number to CuckooFilter.
+	return (double)rand() / (double)RAND_MAX; //On systems without rand, the programmer will have to define a pseudo-random function.
+}
+int main() { 
 	CuckooFilter<int, CUCKOO_BUCKET_COUNT, CUCKOO_ENTRY_BY_BUCKET, CUCKOO_ENTRY_SIZE, funct_cuckoo, randy> cf;
 	cf.add(10);
 	cf.add(7);
