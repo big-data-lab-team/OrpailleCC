@@ -148,7 +148,43 @@ int main(){
 }
 ```
 ## Chained Reservoir Sampling
-Add example
+```cpp
+#include <iostream> //Included for cout
+#include <cstdlib> //Included for malloc (note: that on other system, the malloc function may be redifined otherwise.)
+#include "chained_reservoir.hpp"
+
+//Define a structure that contains the malloc function
+struct funct{
+	static void* malloc(unsigned int const size){
+		return std::malloc(size);
+	}
+};
+//Define declare the random function
+double randy(void){
+	return (double)rand() / (double)RAND_MAX;
+}
+#define RESERVOIR_SIZE 10
+int main(){
+	/*Create a ChainedReservoirSampling object:
+		- That stores integer
+		- Which has a reservoir size of 10 (RESERVOIR_SIZE)
+		- Which uses randy as random function
+		- Which uses the structure funct to call for other functions. (in that case, only memory allocation function)
+	*/
+	ChainedReservoirSampling<int, RESERVOIR_SIZE, randy, funct> rs;
+	for(int i = 0; i < 100; ++i)
+		rs.add(i, i+1); // Add new element to the reservoir (given a certain probability)
+	std::cout << "Original reservoir: "; 
+	for(int i = 0; i < RESERVOIR_SIZE; ++i)
+		std::cout << rs[i] << " "; //Access the reservoir content
+	std::cout << std::endl;
+	rs.obsolete(20); //Declare all timestamp before 20 obsolete (20 is included)
+	std::cout << "Obsolete reservoir: "; 
+	for(int i = 0; i < RESERVOIR_SIZE; ++i)
+		std::cout << rs[i] << " ";
+	std::cout << std::endl;
+}
+```
 ## Bloom Filter
 ```cpp
 #include <iostream> //Included for cout
