@@ -1,7 +1,5 @@
 #include <cmath>
-
-#include <iostream>
-using namespace std;
+#include <cassert>
 
 /**
  * A class that implement the reservoir sampling algorithm.
