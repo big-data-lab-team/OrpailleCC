@@ -4,6 +4,7 @@
 #include "cuckoo_filter.hpp"
 #include "ltc.hpp"
 #include "reservoir_sampling.hpp"
+#include "mc_nn.hpp"
 #include <sys/time.h>
 using namespace std;
 
@@ -87,9 +88,10 @@ void test_bloom(void){
 void test_ltc(void){
 	cout << "\t=== LTC ===" << endl;
 	double start, stop;
-	int count_smooth = 0, count_rough = 0, count_linear = 0;
+	int count_smooth = 0, count_rough = 0, count_linear = 0, count_rand = 0;
 	int vals_smooth[LTC_SIZE];
 	int vals_rough[LTC_SIZE];
+	int* vals_rand = vals_smooth;
 	for(int i = 0; i < LTC_SIZE; ++i){
 		vals_smooth[i] = round(cos(i*0.1) * 20);
 		vals_rough[i] = round(cos(i) * 20);
@@ -98,31 +100,7 @@ void test_ltc(void){
 	start = When();
 	for(int j = 0; j < 1000; ++j)
 	{
-		LTC<3> comp;
-		for(int i = 0; i < LTC_SIZE; ++i){
-			bool a = comp.add(i, vals_rough[i]);
-			if(a)
-				count_rough += 1;
-		}
-	}
-	stop = When();
-	cout << "Time (rough): " << (stop - start) << " (" << (((stop - start) / (LTC_SIZE * 1000)) * 1e9) << " ns/item)" << endl;
-	start = When();
-	for(int j = 0; j < 1000; ++j)
-	{
-		LTC<3> comp;
-		for(int i = 0; i < LTC_SIZE; ++i){
-			bool a = comp.add(i, vals_smooth[i]);
-			if(a)
-				count_smooth += 1;
-		}
-	}
-	stop = When();
-	cout << "Time (smooth): " << (stop - start) << " (" << (((stop - start) / (LTC_SIZE * 1000)) * 1e9) << " ns/item)" << endl;
-	start = When();
-	for(int j = 0; j < 1000; ++j)
-	{
-		LTC<3> comp;
+		LTC<int, int, 3> comp;
 		for(int i = 0; i < LTC_SIZE; ++i){
 			bool a = comp.add(i, i%200);
 			if(a)
@@ -131,9 +109,51 @@ void test_ltc(void){
 	}
 	stop = When();
 	cout << "Time (linear): " << (stop - start) << " (" << (((stop - start) / (LTC_SIZE * 1000)) * 1e9) << " ns/item)" << endl;
-	cout << "Rough: " << ((count_rough)/1e6) << "M" << endl;
-	cout << "Smooth: " << ((count_smooth)/1e6) << "M" << endl;
+	start = When();
+	for(int j = 0; j < 1000; ++j)
+	{
+		LTC<int, int, 3> comp;
+		for(int i = 0; i < LTC_SIZE; ++i){
+			bool a = comp.add(i, vals_smooth[i]);
+			if(a)
+				count_smooth += 1;
+		}
+	}
+	stop = When();
+	cout << "Time (smooth): " << (stop - start) << " (" << (((stop - start) / (LTC_SIZE * 1000)) * 1e9) << " ns/item)" << endl;
+
+	start = When();
+	for(int j = 0; j < 1000; ++j)
+	{
+		LTC<int, int, 3> comp;
+		for(int i = 0; i < LTC_SIZE; ++i){
+			bool a = comp.add(i, vals_rough[i]);
+			if(a)
+				count_rough += 1;
+		}
+	}
+	stop = When();
+	cout << "Time (rough): " << (stop - start) << " (" << (((stop - start) / (LTC_SIZE * 1000)) * 1e9) << " ns/item)" << endl;
+
+	for(int i = 0; i < LTC_SIZE; ++i)
+		vals_rand[i] = rand()%100000;
+
+	start = When();
+	for(int j = 0; j < 1000; ++j)
+	{
+		LTC<int, int, 3> comp;
+		for(int i = 0; i < LTC_SIZE; ++i){
+			bool a = comp.add(i, vals_rand[i]);
+			if(a)
+				count_rand += 1;
+		}
+	}
+	stop = When();
+	cout << "Time (random): " << (stop - start) << " (" << (((stop - start) / (LTC_SIZE * 1000)) * 1e9) << " ns/item)" << endl;
 	cout << "Linear: " << ((count_linear)/1e6) << "M" << endl;
+	cout << "Smooth: " << ((count_smooth)/1e6) << "M" << endl;
+	cout << "Rough: " << ((count_rough)/1e6) << "M" << endl;
+	cout << "Rand: " << ((count_rand)/1e6) << "M" << endl;
 }
 void test_reservoir_sampling(void){
 	cout << "\t=== Reservoir Sampling ===" << endl;
@@ -165,9 +185,45 @@ void test_reservoir_sampling(void){
 		if(count[i] < 0)
 			cout << i << ": " << count[i] << endl;
 }
+#define MCNN_FEATURE_COUNT 4
+//void test_mc_nn(void){
+	//cout << "\t=== MCNN ===" << endl;
+	//int dataset_size = 20;
+	//MCNN<double, features_count, 10, 10> classifier;
+	//double* dataset = (int*)calloc(features_count * dataset_size, sizeof(double));
+	//int* labels = malloc(dataset_size * sizeof(int));
+	//double* dataset2 = (int*)calloc(features_count * dataset_size, sizeof(double));
+	//int* labels2 = malloc(dataset_size * sizeof(int));
+	//for(int i = 0; i < dataset_size; ++i){
+		//labels[i] = rand()%7;
+		////TODO give some random value
+		//for(int j = 0; j < features_count; ++j)
+			//dataset[i][j] = 0;
+
+		//labels2[i] = rand()%7;
+		////TODO give some random value
+		//for(int j = 0; j < features_count; ++j)
+			//dataset2[i][j] = 0;
+	//}
+	
+	//int const turn_count = 10;
+	//for(int i = 0; i < turn_count; ++i){
+		//for(int idx = 0; idx < dataset_size; ++idx)
+			//classifier.train(dataset[idx], labels[idx]);	
+		//for(int idx = 0; idx < dataset_size; ++idx)
+			//classifier.train(dataset2[idx], labels2[idx]);	
+	//}
+	//classifier.print();
+	//for(int idx = 8; idx < 13; ++idx){
+		//auto predict = classifier.predict(dataset[idx]);
+		//cout << "Prediction for " << idx << ": " << predict << endl;
+		//classifier.train(dataset[idx], labels[idx]);	
+		//classifier.print();
+	//}
+//}
 int main(int argc, char** argv){
-	test_reservoir_sampling();
 	test_ltc();
+	test_reservoir_sampling();
 	test_bloom();
 	test_cuckoo();
 	return 0;
