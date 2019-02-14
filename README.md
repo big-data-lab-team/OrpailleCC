@@ -269,3 +269,7 @@ int main() {
 - Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
 - Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
 - Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
+
+# How can I help?
+- Report issues and seek support in the Issues tab.
+- Write new examples or improve existing examples and share them with a pull request. 
