@@ -1,15 +1,15 @@
 [![Build Status](https://travis-ci.org/azazel7/OrpailleCC.svg?branch=master)](https://travis-ci.org/azazel7/OrpailleCC)
 
-OrpailleCC is data stream library writen in C++. It provide a consistent
-collection of datastream algorithm for embeded device such as sensors.
+OrpailleCC is data stream library written in C++. It provides a consistent
+collection of data stream algorithm for embedded devices such as sensors.
 
-The library is based on template and does not use the STL library.  To start
+The library is based on C++ templates and does not use the STL library.  To start
 using a feature, just include the header files in your project and compile your
 project.
 
 # Get started
 ## Hello World
-Let run a basic example with a Reservoir sampling.
+Let us run a basic example with a Reservoir sampling.
 Save the following code in *testy.cpp*.
 ```cpp
 #include <iostream> //Included for cout
@@ -21,7 +21,7 @@ double randy(void){ //We need this function to provide a random number to Reserv
 
 int main(){
 	char hello[] = "Hello-world!"; //Create a stream
-	ReservoirSampling<char, 3, randy> rs; //Instanciate a ReservoirSampling instance
+	ReservoirSampling<char, 3, randy> rs; //Instantiate a ReservoirSampling instance
 	//This instance works with char, contains a reservoir of size 3 and  use the randy function to generate random numbers.
 	for(int j = 0; j < 12; ++j) //Feed the ReservoirSampling instance with every element of the stream (here letters of the string)
 		rs.add(hello[j]);
@@ -55,37 +55,37 @@ To run a performance test on your laptop, compile the performance tests with
 
 ![Alt](/figures/performance.png "An example of the performance output")
 
-# List of Algorithms
-
-- Lightweight Temporal Compression
-- Micro-Cluster Nearest Neighbour
-- Reservoir Sampling
-- Chained Reservoir Sampling
-- Bloom Filter
-- Cuckoo Filter
-
 # Example
+This section provides the list of all algorithms implemented in OrpailleCC with a brief example.
 ## Lightweight Temporal Compression (LTC)
+LTC is a compression algorithm that approximate a serie of value with a linear
+function. The epsilon parameter control the amount of compression. If the
+approximation with a linear function cannot be made, then a new point is
+issued.
+
 To use the LTC object, you need to include the header `ltc.hpp`.
 ```cpp
 #include "ltc.hpp"
 
 int main(){
-	LTC<int, int, 3> comp; //Instanciate an LTC object that works with integer as element, and integer as timestamp.
+	LTC<int, int, 3> comp; //Instantiate an LTC object that works with integers as element, and integers as timestamp.
 	//The epsilon is set to 3. 
 	for(int i = 0; i < 10000; ++i){ //10000 points are added sequentially.
-		//The add function return true, if the new point cannot be compressed with the previous ones and thus needs to be transmitted.
+		//The add function returns true, if the new point cannot be compressed with the previous ones and thus needs to be transmitted.
 		bool need_transmission = comp.add(i, i%200);
 		if(need_transmission){
 			int timestamp, value;
-			//the function get_value_to_transmit fetch the next datapoint to send and stores it into timestamp and value.
+			//the function get_value_to_transmit fetch the next data point to send and stores it into timestamp and value.
 			comp.get_value_to_transmit(timestamp, value);
 			// ... Execute the transmission or store the point.
 		}
 	}
 }
 ```
-## Micro-Cluster Nearest Neighbour
+## Micro-Cluster Nearest Neighbour (MC-NN)
+MC-NN is a classifier based on k-nearest neighbours. It aggregates the data
+points into micro-clusters and make them evolve to catch concept drifts.
+
 ```cpp
 #include <iostream> //Included for cout
 #include "mc_nn.hpp"
@@ -93,7 +93,7 @@ int main(){
 #define MCNN_FEATURE_COUNT 2
 int main(){
 	int const dataset_size = 9;
-	/*Instanciate a MCNN classifier that uses:
+	/*Instantiate a MCNN classifier that uses:
 		- double as features
 		- which consider two features (MCNN_FEATURE_COUNT)
 		- That uses 10 clusters at most
@@ -137,8 +137,8 @@ double randy(void){ //We need this function to provide a random number to Reserv
 
 int main(){
 	char hello[] = "Hello-world!"; //Create a stream
-	ReservoirSampling<char, 3, randy> rs; //Instanciate a ReservoirSampling instance
-    //This instance works with char, contains a reservoir of size 3 and  use the randy function to generate random numbers.
+	ReservoirSampling<char, 3, randy> rs; //Instantiate a ReservoirSampling instance
+	//This instance works with char, contains a reservoir of size 3 and  use the randy function to generate random numbers.
 	for(int j = 0; j < 12; ++j) //Feed the ReservoirSampling instance with every element of the stream (here letters of the string)
 		rs.add(hello[j]);
 	for(int j = 0; j < 3; ++j) //Print every element in the reservoir
@@ -148,6 +148,8 @@ int main(){
 }
 ```
 ## Chained Reservoir Sampling
+The chained reservoir sampling is a variant of the reservoir sampling that allows discarding outdated data while maintaining the reservoir distribution.
+
 ```cpp
 #include <iostream> //Included for cout
 #include <cstdlib> //Included for malloc (note: that on other system, the malloc function may be redifined otherwise.)
@@ -159,7 +161,7 @@ struct funct{
 		return std::malloc(size);
 	}
 };
-//Define declare the random function
+//Declare the random function
 double randy(void){
 	return (double)rand() / (double)RAND_MAX;
 }
@@ -196,14 +198,14 @@ unsigned int hash_int(int* element){
 }
 int main(){
 	auto p = hash_int;
-	/*Instanciate a BloomFilter object:
+	/*Instantiate a BloomFilter object:
 		- The element type taken as input (int)
 		- The size (in bit) of the filter
 		- The number of hash function to use
 	With p containing the hash function.
 	*/
 	BloomFilter<int, BLOOM_FILTER_SIZE, 1> bf(&p);
-	//Add 3 element to the filter
+	//Add 3 elements to the filter
 	bf.add(10);
 	bf.add(7);
 	bf.add(73);
@@ -229,24 +231,23 @@ Note that, due to the Bloom Filter size, more than three elements will be recogn
 
 //This structure contains functions for the cuckoo filter.
 struct funct_cuckoo{
-	//The finger print function should return 
+	//The fingerprint function should return value within the size of an entry size.
 	static unsigned char fingerprint(int const* e){
 		//mod 7 == value between 0 and 6, +1 == value between 1 and 7, so the empty value (0x0) is avoided
 		return ((*e)%7)+1; 
 	}
+	//The hash function that takes an element as input and return an index.
 	static unsigned int hash(int const* e){
 		return (*e)%CUCKOO_BUCKET_COUNT;		
 	}
-	/*
-	 * Make the combination of hash element and hash fingerprint does not lead to the same value
-	 * Hash of fingerprint should probably not return a 0 or a 2^CUCKOO_ENTRY_SIZE-1 because it create same h1 and h2
-	 */
+	//This hash function take a fingerprint as input and return an index.
 	static unsigned int hash(unsigned char fingerprint){
+		//Here, we make sure that the two hashfunctions does not return the same value
 		return (fingerprint * 7)%CUCKOO_BUCKET_COUNT;
 	}
 };
 double randy(void){ //We need this function to provide a random number to CuckooFilter.
-	return (double)rand() / (double)RAND_MAX; //On systems without rand, the programmer will have to define a pseudo-random function.
+	return (double)rand() / (double)RAND_MAX; //On systems without rand, the programmer will have to define his own function.
 }
 int main() { 
 	CuckooFilter<int, CUCKOO_BUCKET_COUNT, CUCKOO_ENTRY_BY_BUCKET, CUCKOO_ENTRY_SIZE, funct_cuckoo, randy> cf;
@@ -262,6 +263,14 @@ int main() {
 	std::cout << std::endl;
 }
 ```
+
+# How can I help?
+- Report issues and seek support in the Issues tab.
+- Write new examples or improve existing examples and share them with a pull request. 
+- Submit ideas for future algorithms to integrate.
+- Submit pull request with algorithm implementation.
+- Submit pull request with additional test cases.
+
 # References
 - Schoellhammer, Tom and Greenstein, Ben and Osterweil, Eric and Wimbrow, Michael and Estrin, Deborah (2004), "Lightweight temporal compression of microclimate datasets"
 - Babcock, Brian and Datar, Mayur and Motwani, Rajeev (2002), "Sampling from a moving window over streaming data", Proceedings of the thirteenth annual Association for Computing Machinery-SIAM symposium on Discrete algorithms, pages 633--634
@@ -269,7 +278,3 @@ int main() {
 - Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
 - Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
 - Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
-
-# How can I help?
-- Report issues and seek support in the Issues tab.
-- Write new examples or improve existing examples and share them with a pull request. 
