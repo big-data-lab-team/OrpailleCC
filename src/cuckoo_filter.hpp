@@ -2,10 +2,23 @@
 #include <type_traits>
 #include <cmath>
 
-#include <iostream>
 #include <utility>
 
 #define BYTE_SIZE (sizeof(unsigned char))
+/**
+ * CuckooFilter class implements the Cuckoo Filter algorithm.
+ * Templates:
+ * - element_type: the type of element to handle.
+ * - bucket_count: the number of bucket to use.
+ * - bucket_size: the number of entry per bucket.
+ * - entry_size: the size of an entry in bit.
+ * - funct: a class type that contains all needed function for the cuckoo filter.
+ *   	+ fingerprint function: return a fingerprint given an element. The fingerprint should be in the size of entry_size. SHould not return an empty_value.
+ *   	+ hash function: return an index within [0, bucket_count[ given an element.
+ *   	+ hash function: return an index within [0, bucket_count[ given a fingerprint.
+ * - random_function: The random_function that return a random number between [0, 1[.
+ * - empty_value: the fingerprint that represent an empty value and that filled the filter at the beginning.
+ */
 template<class element_type, int bucket_count, int bucket_size, int entry_size, class funct, double (*random_function)(), int empty_value=0>
 class CuckooFilter{
 	//Typedef to simplify the use of the hash function given by the user.
@@ -99,11 +112,22 @@ class CuckooFilter{
 		return false;
 	}
 	public:
+	/**
+	 * Basic constructor.
+	 */
 	CuckooFilter(){
 	}
+	/**
+	 * Add a new element to the filter.
+	 * @param e the new element to add.
+	 */
 	bool add(element_type const e){
 		return add(&e);
 	}
+	/**
+	 * Add a new element to the filter.
+	 * @param e A pointer toward the new element to add.
+	 */
 	bool add(element_type const* e){
 		fingerprint_t fp = funct::fingerprint(e);
 		unsigned int h1 = funct::hash(e);
@@ -147,16 +171,32 @@ class CuckooFilter{
 
 		return inserted;
 	}
+	/**
+	 * Check if the element e belongs in the current filter.
+	 * @param e The element to check.
+	 */
 	bool lookup(element_type const e){
 		return lookup(&e);
 	}
+	/**
+	 * Check if the element e belongs in the current filter.
+	 * @param e A pointer toward the element to check.
+	 */
 	bool lookup(element_type const* e){
 		unsigned int bucket_index, entry_index;
 		return search(e, bucket_index, entry_index);
 	}
+	/**
+	 * Remove an element from the filter.
+	 * @param e The element to remove.
+	 */
 	void remove(element_type const e){
 		remove(&e);
 	}
+	/**
+	 * Remove an element from the filter.
+	 * @param e A pointer to the element to remove.
+	 */
 	void remove(element_type const* e){
 		unsigned int bucket_index, entry_index;
 		bool ret = search(e, bucket_index, entry_index);
@@ -164,6 +204,9 @@ class CuckooFilter{
 			set_entry(bucket_index, entry_index, empty_value);
 		}
 	}
+	/**
+	 * Empty the filter.
+	 */
 	void clear(void){
 		for(unsigned char& byte : filter)
 			byte = 0;
