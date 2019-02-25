@@ -99,7 +99,6 @@ class MCNN{
 
 	//Function to split a cluster
 	void split(int const cluster_idx){
-		cout << "Split" << endl;
 		int new_idx = -1;
 		for(int i = 0; i < max_cluster; ++i){
 			if(!active[i] && i != cluster_idx){
@@ -131,10 +130,7 @@ class MCNN{
 		//Update the spliting attribut
 		cluster_minus[split_index] -= highest_variance;
 		cluster_plus[split_index] += highest_variance;
-		cout << "Variance: " << highest_variance << " (" << split_index << ")" << endl;
-		cout << "[" << cluster_minus[0] <<"," << cluster_minus[1] <<"]" << endl;
-		cout << "[" << cluster_plus[0] <<"," << cluster_plus[1] <<"]" << endl;
-
+		
 		//TODO: round somehow
 		int old_time = (clusters[cluster_idx].timestamp_sum / clusters[cluster_idx].data_count);
 
