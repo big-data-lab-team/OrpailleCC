@@ -3,6 +3,12 @@
 //Typedef to simplify the use of the hash function given by the user.
 #define BYTE_SIZE (sizeof(unsigned char))
 
+/**
+ * The BloomFilter class implement the Bloom filter algorithm.
+ * - element_type: the type of element to take as input.
+ * - bit_size: the size of the Bloom filter in bit.
+ * - hash_count: the number of hash function to use.
+ */
 template<class element_type, int bit_size, int hash_count>
 class BloomFilter{
 	typedef unsigned int (*hash_function_t)(element_type*);
@@ -11,6 +17,10 @@ class BloomFilter{
 	unsigned int const real_size = ((bit_size - (bit_size%BYTE_SIZE)) / BYTE_SIZE) + ((bit_size%BYTE_SIZE) > 0);
 
 	public:
+	/**
+	 * Constructor of the BloomFilter.
+	 * @param h an array of size hash_count with the list of hash function to use.
+	 */
 	BloomFilter(hash_function_t* h){
 		assert(h != nullptr);
 		assert(bit_size >= 1);
@@ -24,21 +34,25 @@ class BloomFilter{
 	/*
 	 * Add an element to the Bloom Filter
 	 * @param bf The BloomFilter object.
-	 * @param element The new element to add
+	 * @param element The pointer to the new element to add
 	 */
 	void add(element_type* element){
 		assert(element != nullptr);
 		for(int i = 0; i < hash_count; ++i)
 			set_bit_to_one(hashs[i](element));
 	}
+	/*
+	 * Add an element to the Bloom Filter
+	 * @param bf The BloomFilter object.
+	 * @param element The new element to add
+	 */
 	void add(element_type element){
 		add(&element);
 	}
 
 	/*
 	 * Lookup if an element is in the BloomFilter.
-	 * @param bf The BloomFilter object.
-	 * @param element The element to check.
+	 * @param element The pointer to the element to check.
 	 * @return true if the element is possibly in the filter.
 	 */
 	bool lookup(element_type* element){
@@ -48,6 +62,11 @@ class BloomFilter{
 				return false;
 		return true;
 	}
+	/*
+	 * Lookup if an element is in the BloomFilter.
+	 * @param element The element to check.
+	 * @return true if the element is possibly in the filter.
+	 */
 	bool lookup(element_type element){
 		return lookup(&element);
 	}
