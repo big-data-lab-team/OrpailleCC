@@ -158,12 +158,12 @@ class ChainedReservoirSampling{
 			node& head = sample[i];
 			node* current = &head;
 
-			//TODO make sure nothing get out of the chain
-			while(current->timestamp < timestamp){
-				assert(current->next != NULL);
-				current = current->next;
-			}
-			if(&head != current)
+			do{
+				if(current != NULL)
+					current = current->next;
+			}while(current != NULL && current->timestamp < timestamp);
+
+			if(current != NULL && &head != current)
 				shift_chain(head, *current);
 		}
 	}
