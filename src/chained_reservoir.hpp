@@ -24,8 +24,12 @@ class ChainedReservoirSampling{
 	 * @param d the double to round
 	 */
 	double round(double const d) {
-		  return floor(d + 0.5);
+		  return (double)((int)(d + 0.5));
 	}
+	/**
+	 * Function to reset a chain when it is replaced. This is a recursive function.
+	 * @param start The node to start from.
+	 */
 	void clear_chain(node* start){
 		if(start == NULL)
 			return;
@@ -33,6 +37,12 @@ class ChainedReservoirSampling{
 		//TODO improve this recursive code lazy boy -_-"
 		clear_chain(start->next);
 	}
+	/** Add a new element in the first available space of a chain.
+	 * If there is no space (and no loop) it run the malloc function given in `funct` to allocate a new space.
+	 * @param head the head of the chain to add to.
+	 * @param e the element to add.
+	 * @param timestamp the timestam of the element.
+	 */
 	void push_on_chain(node& head, element_type e, unsigned int const timestamp){
 		node* current = &head;
 		int i = 0;
@@ -79,6 +89,10 @@ class ChainedReservoirSampling{
 		}
 	}
 	public:
+	/**
+	 * Default constructor.
+	 * Initialize an empty reservoir.
+	 */
 	ChainedReservoirSampling(){
 		for(struct node& current : sample){
 			current.next = NULL;
@@ -135,6 +149,9 @@ class ChainedReservoirSampling{
 	/*
 	 * Declare a timestamp and all anterior timestamp obsolete
 	 * @param timestamp the timestamp to declare obsolete
+	 */
+	/** Set a new obsolete timestamp. All element with a timestamp prior to this timestamp will be discarded.
+	 * @param timestamp a new obsolete timestamp.
 	 */
 	void obsolete(unsigned int const timestamp){
 		for(int i = 0; i < sample_size; ++i){
