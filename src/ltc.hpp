@@ -1,3 +1,12 @@
+/**
+ * Implement the Lightweight Temporal Compression (LTC) algorithm.
+ * - element_type: the type of element to store. It must be numbers.
+ * - timestamp_type: the type to use for the timestamp.
+ * - epsilon: the margin to use around each data point to approximate the point with a linear function.
+ * - max_value: the maximum value the data point can reach.
+ * - min_value: the minimum value the data point can reach.
+ * - time_unit_difference: a factor to adapt timestamp computation.
+ */
 template<class element_type, class timestamp_type, int epsilon, int max_value=32767, int min_value=-32768, int time_unit_difference=1>
 class LTC{
 	struct data_point{
@@ -51,11 +60,22 @@ class LTC{
 	public:
 	LTC(){
 	}
+	/**
+	 * Function to access the last data point to transmit.
+	 * @param[out] timestamp A reference that receives the timestamp of the data point to transmit.
+	 * @param[out] value A reference that receives the value of the data point.
+	 */
 	void get_value_to_transmit(timestamp_type& timestamp, element_type& value){
 		//Set the return value
 		timestamp = to_transmit.timestamp;	
 		value = to_transmit.value;	
 	}
+	/**
+	 * Add a new point to the compressed data.
+	 * @param timestamp The timestamp of the data point.
+	 * @param value The value of the data point.
+	 * @return Returns true if the element cannot be compressed given the epsilon and if a new data point to transmit is available.
+	 */
 	int add(timestamp_type const timestamp, element_type const value) {
 		if(counter == 0){
 			last_transmit_point.timestamp = timestamp;
