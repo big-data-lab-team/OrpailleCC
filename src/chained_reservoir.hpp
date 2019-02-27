@@ -157,13 +157,16 @@ class ChainedReservoirSampling{
 		for(int i = 0; i < sample_size; ++i){
 			node& head = sample[i];
 			node* current = &head;
+			bool do_shift = true;
 
-			do{
-				if(current != NULL)
-					current = current->next;
-			}while(current != NULL && current->timestamp < timestamp);
-
-			if(current != NULL && &head != current)
+			while(current->timestamp < timestamp){
+				if(current->next == NULL){
+					do_shift = false;
+					break;
+				}
+				current = current->next;
+			}
+			if(do_shift && &head != current)
 				shift_chain(head, *current);
 		}
 	}
