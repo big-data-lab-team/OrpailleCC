@@ -1,8 +1,15 @@
-#include <iostream>
 #include <cassert>
 #include <cmath>
 //https://github.com/mahmoodshakir/Micro-Cluster-Nearest-Neighbour-MC-NN-Algorithm
-using namespace std;
+/*
+ * Implement the MC-NN algorithm.
+ * - feature_type: the type of the features. They must have all the same type.
+ * - feature_count: The number of feature per data point.
+ * - max_cluster: The maximum number of cluster to use (default: 25).
+ * - error_threshold: The number of misclassification before the cluster is split.
+ * - performance_thr: the threshold to remove old cluster. (not used yet).
+ * - empty_class: the value of an empty class.
+ */
 template<class feature_type, unsigned int feature_count, unsigned int max_cluster=25,unsigned int error_threshold=2, int performance_thr=50, int empty_class=-1>
 class MCNN{
 	//Define an internal definition of a micro-cluster
@@ -15,18 +22,6 @@ class MCNN{
 		int label;
 		int error_count;
 		double initial_timestamp;
-		void print(void){
-			cout << "Class: " << label << "\tError count: " << error_count << "/" << error_threshold << "\tCount: " << data_count << "\t";
-			if(feature_count < 7){
-				feature_type cent[feature_count];
-				centroid(cent);
-				cout << "[";
-				for(int i = 0; i < feature_count-1; ++i)
-					cout << cent[i] << ", ";
-				cout << cent[feature_count-1] << "]";
-			}
-			cout << endl;
-		}
 		double variance(unsigned int const features_idx) const{
 			double const a = (double)features_square_sum[features_idx] / (double)data_count; //CF2X
 			double const b = (double)features_sum[features_idx] / (double)data_count; //CF1X
@@ -201,16 +196,12 @@ class MCNN{
 		return sqrt(val); //TODO: to change
 	}
 	public:
-	void print(void){
-		cout << "\t=== MCNN ===" << endl;
-		cout << "Active clusters: " << count_active_cluster << endl;
-		cout << "Timestamp: " << timestamp << endl;
-		for(int i = 0; i < max_cluster; ++i)
-			if(active[i]){
-				cout << "Cluster " << i << " - ";
-				clusters[i].print();
-			}
-	}
+	/*
+	 * Train the model with a new data point.
+	 * @param features An array of features.
+	 * @param label The class for this data point.
+	 * @return Return false if there is no more space for a new cluster.
+	 */
 	bool train(feature_type const* features, int const label){
 		assert(features != NULL);
 		//Find the nearest neighbor
@@ -255,7 +246,13 @@ class MCNN{
 				split(nearest_index);
 			}
 		}
+		return true;
 	}
+	/**
+	 * Predict the class of a data point.
+	 * @param features The feature values of the data point.
+	 * @return Return the class predicted.
+	 */
 	int predict(feature_type const* features) const{
 		assert(features != NULL);
 		int nearest_index = -1;
@@ -265,6 +262,10 @@ class MCNN{
 		assert(nearest_index < max_cluster);
 		return clusters[nearest_index].label;
 	}
+	/**
+	 * Return the number of active cluster.
+	 * @return The number of active clusters.
+	 */
 	int count_clusters(void) const{
 		return count_active_cluster;
 	}
