@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/azazel7/OrpailleCC.svg?branch=master)](https://travis-ci.org/azazel7/OrpailleCC)
 
 OrpailleCC is data stream library written in C++. It provides a consistent
-collection of data stream algorithm for embedded devices such as sensors.
+collection of data stream algorithms for embedded devices such as sensors.
 
 The library is based on C++ templates and does not use the STL library.  To start
 using a feature, just include the header files in your project and compile your
@@ -9,13 +9,13 @@ project.
 
 # Get started
 ## Hello World
-Let us run a basic example with a Reservoir sampling.
+Let us run a basic example with a reservoir sampling of size 3.
 Save the following code in *testy.cpp*.
 ```cpp
 #include <iostream> //Included for cout
 #include "reservoir_sampling.hpp"
 
-double randy(void){ //We need this function to provide a random number to ReservoirSampling.
+double randy(void){ //We need this function to provide a random number generator to ReservoirSampling.
 	return (double)rand() / (double)RAND_MAX; //On systems without rand, the programmer will have to define a pseudo-random function.
 }
 
@@ -40,7 +40,7 @@ Hll
 ```
 ## Use the library in your project
 Simply pick the code you need and add to your project.  You also need to add
-the C++11 (`-std=c++11`) flag to your compiling toolchain.
+the C++11 (`-std=c++11`) flag to your compilation toolchain.
 
 An alternative is to add `<OrpailleCC dir>/src` to the include paths of your compiler.
 
@@ -50,17 +50,17 @@ The unit tests require the `googletest` library.
 To run the unit tests, run the command `make run_test`.
 
 ### Performance
-To run a performance test on your laptop, compile the performance tests with
+To run a performance test on your device, compile the performance tests with
 `make perf` then run `./main-perf`.
 
 ![Alt](/figures/performance.png "An example of the performance output")
 
-# Example
+# Examples
 This section provides the list of all algorithms implemented in OrpailleCC with a brief example.
 ## Lightweight Temporal Compression (LTC)
-LTC is a compression algorithm that approximate a serie of value with a linear
-function. The epsilon parameter control the amount of compression. If the
-approximation with a linear function cannot be made, then a new point is
+LTC is a compression algorithm that approximates a series of values with a linear
+function. The epsilon parameter controls the amount of compression. If the
+linear approximation isn't accurate enough, then a new point is
 issued.
 
 To use the LTC object, you need to include the header `ltc.hpp`.
@@ -126,7 +126,9 @@ int main(){
 }
 ```
 ## Reservoir Sampling
-The next example is the one used as a hello world example.
+The next example is the one used as a hello world example. A Reservoir 
+Sample is a fixed-sized sample of the stream where all elements have 
+equal probability to appear.
 ```cpp
 #include <iostream> //Included for cout
 #include "reservoir_sampling.hpp"
@@ -188,6 +190,8 @@ int main(){
 }
 ```
 ## Bloom Filter
+The Bloom filter excludes elements from the stream when they don't belong to 
+a pre-defined set.
 ```cpp
 #include <iostream> //Included for cout
 #include "bloom_filter.hpp"
@@ -221,6 +225,8 @@ int main(){
 Note that, due to the Bloom Filter size, more than three elements will be recognized by the filter.
 
 ## Cuckoo Filter
+The Cuckoo filter is used when elements have to be removed from the pre-defined 
+set of accepted elements.
 ```cpp
 #include <iostream> //Included for cout
 #include "cuckoo_filter.hpp"
@@ -268,8 +274,8 @@ int main() {
 - Report issues and seek support in the Issues tab.
 - Write new examples or improve existing examples and share them with a pull request. 
 - Submit ideas for future algorithms to integrate.
-- Submit pull request with algorithm implementation.
-- Submit pull request with additional test cases.
+- Submit pull requests with algorithm implementation.
+- Submit pull requests with additional test cases.
 
 # References
 - Schoellhammer, Tom and Greenstein, Ben and Osterweil, Eric and Wimbrow, Michael and Estrin, Deborah (2004), "Lightweight temporal compression of microclimate datasets"
