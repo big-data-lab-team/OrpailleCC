@@ -12,7 +12,7 @@ authors:
     orcid: 0000-0003-2620-5883
     affiliation: Concordia University
   - name: Bo Li
-    orcid: 
+    orcid: 0000-0003-4207-5070 
     affiliation: Concordia University
 affiliations:
  - name: Concordia University
