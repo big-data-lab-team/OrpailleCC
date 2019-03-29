@@ -9,7 +9,7 @@ project.
 
 # Get started
 ## Hello World
-Let us run a basic example with a reservoir sampling of size 3.
+Let us run a basic example with a reservoir sampling [4] of size 3.
 Save the following code in *testy.cpp*.
 ```cpp
 #include <iostream> //Included for cout
@@ -58,7 +58,7 @@ To run a performance test on your device, compile the performance tests with
 # Examples
 This section provides the list of all algorithms implemented in OrpailleCC with a brief example.
 ## Lightweight Temporal Compression (LTC)
-LTC is a compression algorithm that approximates a series of values with a linear
+LTC [0] is a compression algorithm that approximates a series of values with a linear
 function. The epsilon parameter controls the amount of compression. If the
 linear approximation isn't accurate enough, then a new point is
 issued.
@@ -83,7 +83,7 @@ int main(){
 }
 ```
 ## Micro-Cluster Nearest Neighbour (MC-NN)
-MC-NN is a classifier based on k-nearest neighbours. It aggregates the data
+MC-NN [3] is a classifier based on k-nearest neighbours. It aggregates the data
 points into micro-clusters and make them evolve to catch concept drifts.
 
 ```cpp
@@ -127,7 +127,7 @@ int main(){
 ```
 ## Reservoir Sampling
 The next example is the one used as a hello world example. A Reservoir 
-Sample is a fixed-sized sample of the stream where all elements have 
+Sample [4] is a fixed-sized sample of the stream where all elements have 
 equal probability to appear.
 ```cpp
 #include <iostream> //Included for cout
@@ -150,7 +150,7 @@ int main(){
 }
 ```
 ## Chained Reservoir Sampling
-The chained reservoir sampling is a variant of the reservoir sampling that allows discarding outdated data while maintaining the reservoir distribution.
+The chained reservoir sampling [1] is a variant of the reservoir sampling that allows discarding outdated data while maintaining the reservoir distribution.
 
 ```cpp
 #include <iostream> //Included for cout
@@ -190,7 +190,7 @@ int main(){
 }
 ```
 ## Bloom Filter
-The Bloom filter excludes elements from the stream when they don't belong to 
+The Bloom filter [5] excludes elements from the stream when they don't belong to 
 a pre-defined set.
 ```cpp
 #include <iostream> //Included for cout
@@ -225,7 +225,7 @@ int main(){
 Note that, due to the Bloom Filter size, more than three elements will be recognized by the filter.
 
 ## Cuckoo Filter
-The Cuckoo filter is used when elements have to be removed from the pre-defined 
+The Cuckoo filter [2] is used when elements have to be removed from the pre-defined 
 set of accepted elements.
 ```cpp
 #include <iostream> //Included for cout
@@ -278,9 +278,9 @@ int main() {
 - Submit pull requests with additional test cases.
 
 # References
-- Schoellhammer, Tom and Greenstein, Ben and Osterweil, Eric and Wimbrow, Michael and Estrin, Deborah (2004), "Lightweight temporal compression of microclimate datasets"
-- Babcock, Brian and Datar, Mayur and Motwani, Rajeev (2002), "Sampling from a moving window over streaming data", Proceedings of the thirteenth annual Association for Computing Machinery-SIAM symposium on Discrete algorithms, pages 633--634
-- Fan, Bin and Andersen, Dave G and Kaminsky, Michael and Mitzenmacher, Michael (2014), "Cuckoo filter: Practically better than bloom", Proceedings of the 10th Association for Computing Machinery International on Conference on emerging Networking Experiments and Technologies, pages 75--88
-- Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
-- Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
-- Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
+[0] Schoellhammer, Tom and Greenstein, Ben and Osterweil, Eric and Wimbrow, Michael and Estrin, Deborah (2004), "Lightweight temporal compression of microclimate datasets"
+[1] Babcock, Brian and Datar, Mayur and Motwani, Rajeev (2002), "Sampling from a moving window over streaming data", Proceedings of the thirteenth annual Association for Computing Machinery-SIAM symposium on Discrete algorithms, pages 633--634
+[2] Fan, Bin and Andersen, Dave G and Kaminsky, Michael and Mitzenmacher, Michael (2014), "Cuckoo filter: Practically better than bloom", Proceedings of the 10th Association for Computing Machinery International on Conference on emerging Networking Experiments and Technologies, pages 75--88
+[3] Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
+[4] Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
+[5] Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
