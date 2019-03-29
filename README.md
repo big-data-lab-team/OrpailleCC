@@ -46,7 +46,7 @@ An alternative is to add `<OrpailleCC dir>/src` to the include paths of your com
 
 ## Test
 ### Unit Test
-The unit tests require the `googletest` library.
+The unit tests require the `googletest` library ([Here](https://github.com/google/googletest)).
 To run the unit tests, run the command `make run_test`.
 
 ### Performance
@@ -278,9 +278,9 @@ int main() {
 - Submit pull requests with additional test cases.
 
 # References
-[0] Schoellhammer, Tom and Greenstein, Ben and Osterweil, Eric and Wimbrow, Michael and Estrin, Deborah (2004), "Lightweight temporal compression of microclimate datasets"
-[1] Babcock, Brian and Datar, Mayur and Motwani, Rajeev (2002), "Sampling from a moving window over streaming data", Proceedings of the thirteenth annual Association for Computing Machinery-SIAM symposium on Discrete algorithms, pages 633--634
-[2] Fan, Bin and Andersen, Dave G and Kaminsky, Michael and Mitzenmacher, Michael (2014), "Cuckoo filter: Practically better than bloom", Proceedings of the 10th Association for Computing Machinery International on Conference on emerging Networking Experiments and Technologies, pages 75--88
-[3] Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
-[4] Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
-[5] Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
+- [0] Schoellhammer, Tom and Greenstein, Ben and Osterweil, Eric and Wimbrow, Michael and Estrin, Deborah (2004), "Lightweight temporal compression of microclimate datasets"
+- [1] Babcock, Brian and Datar, Mayur and Motwani, Rajeev (2002), "Sampling from a moving window over streaming data", Proceedings of the thirteenth annual Association for Computing Machinery-SIAM symposium on Discrete algorithms, pages 633--634
+- [2] Fan, Bin and Andersen, Dave G and Kaminsky, Michael and Mitzenmacher, Michael (2014), "Cuckoo filter: Practically better than bloom", Proceedings of the 10th Association for Computing Machinery International on Conference on emerging Networking Experiments and Technologies, pages 75--88
+- [3] Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
+- [4] Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
+- [5] Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
