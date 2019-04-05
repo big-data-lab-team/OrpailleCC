@@ -8,11 +8,11 @@ authors:
   - name: Martin Khannouz
     orcid: 0000-0003-2129-5517
     affiliation: 1
-  - name: Tristan Glatard
-    orcid: 0000-0003-2620-5883
-    affiliation: 1
   - name: Bo Li
     orcid: 0000-0003-4207-5070 
+    affiliation: 1
+  - name: Tristan Glatard
+    orcid: 0000-0003-2620-5883
     affiliation: 1
 affiliations:
  - name: Concordia University
