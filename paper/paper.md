@@ -15,7 +15,7 @@ authors:
     orcid: 0000-0003-2620-5883
     affiliation: 1
 affiliations:
- - name: Concordia University
+ - name: Department of Computer Science and Software Engineering, Concordia University, Montreal, Canada
    index: 1
 date: 29 March 2019
 bibliography: paper.bib
