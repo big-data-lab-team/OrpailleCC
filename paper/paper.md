@@ -72,7 +72,8 @@ was chosen for its performance as well as its popularity in the
 field. All methods are tested and tests are run through Travis-CI.
 
 In the future, we plan to extend the library with other reliable 
-algorithms to widely cover as many common problems as possible.
+algorithms to widely cover as many common problems as possible. We also plan to 
+use it as a basis to design new stream classification methods.
 External contributions are, of course, most welcome.
 
 # References
