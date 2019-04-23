@@ -8,11 +8,11 @@ authors:
   - name: Martin Khannouz
     orcid: 0000-0003-2129-5517
     affiliation: 1
-  - name: Tristan Glatard
-    orcid: 0000-0003-2620-5883
-    affiliation: 1
   - name: Bo Li
     orcid: 0000-0003-4207-5070 
+    affiliation: 1
+  - name: Tristan Glatard
+    orcid: 0000-0003-2620-5883
     affiliation: 1
 affiliations:
  - name: Concordia University
@@ -31,11 +31,14 @@ applications could leverage the computing power of connected objects
 for improved scalability.
 
 OrpailleCC provides a consistent collection of data stream algorithms 
-developed to be deployed on embedded devices. Its main objective
-is to enable programmers of embedded systems to use 
-out-of-the-box algorithms with an efficient implementation. It also 
-intends to facilitate the comparison and benchmarking of algorithms in a 
-consistent framework.
+developed to be deployed on embedded devices.  Its main objective is to
+support research on data stream mining for connected objects,
+by facilitating the comparison and benchmarking of algorithms in a 
+consistent framework. It also enables programmers of embedded systems to use 
+out-of-the-box algorithms with an efficient implementation.
+To the best of our knowledge, existing libraries of stream mining
+algorithms cannot be used on connected objects due to their resource consumption or
+assumptions about the target system (e.g., existence of a `malloc` function). 
 
 OrpailleCC targets the classes of problems discussed in [@kejariwal2015],
  in particular Sampling and 
@@ -69,7 +72,8 @@ was chosen for its performance as well as its popularity in the
 field. All methods are tested and tests are run through Travis-CI.
 
 In the future, we plan to extend the library with other reliable 
-algorithms to widely cover as many common problems as possible.
+algorithms to widely cover as many common problems as possible. We also plan to 
+use it as a basis to design new stream classification methods.
 External contributions are, of course, most welcome.
 
-# Reference
+# References
