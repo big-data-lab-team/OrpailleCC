@@ -38,7 +38,10 @@ consistent framework. It also enables programmers of embedded systems to use
 out-of-the-box algorithms with an efficient implementation.
 To the best of our knowledge, existing libraries of stream mining
 algorithms cannot be used on connected objects due to their resource consumption or
-assumptions about the target system (e.g., existence of a `malloc` function). 
+assumptions about the target system (e.g., existence of a `malloc` function).
+Nevertheless, for more powerful devices such as desktop computers, Java
+frameworks such as Massive Online Analysis [@moa] and WEKA [@weka] achieve
+similar goals as OrpailleCC.
 
 OrpailleCC targets the classes of problems discussed in [@kejariwal2015],
  in particular Sampling and 
