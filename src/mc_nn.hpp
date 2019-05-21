@@ -1,5 +1,7 @@
 #include <cassert>
 #include <cmath>
+#include <iostream>
+using namespace std;
 //https://github.com/mahmoodshakir/Micro-Cluster-Nearest-Neighbour-MC-NN-Algorithm
 /*
  * Implement the MC-NN algorithm.
@@ -49,7 +51,7 @@ class MCNN{
 			timestamp_sum = timestamp;
 			timestamp_square_sum = timestamp * timestamp;
 			data_count = 1;
-			error_count = error_threshold + 1;
+			error_count = error_threshold; //The error count start at the threshold (contrary to what is says in the paper)
 			this->label = label;
 			for(int i = 0; i < feature_count; ++i){
 				features_sum[i] = features[i];
@@ -219,7 +221,7 @@ class MCNN{
 				}
 			}
 			//If we are here, there was already `max_cluster` clusters active.
-			//TODO don't know what to do
+			//TODO don't know what to do :]
 			return false;
 		}
 		//Get the cluster
@@ -239,10 +241,10 @@ class MCNN{
 			nearest_with_class.error_count -= 1;
 			nearest_with_class.incorporate(features, timestamp);
 			//If one of them reach error_threshold, the cluster is split
-			if(nearest_with_class.error_count < error_threshold){
+			if(nearest_with_class.error_count <= 0){
 				split(nearest_with_class_index);
 			}
-			if(nearest.error_count < error_threshold){
+			if(nearest.error_count <= 0){
 				split(nearest_index);
 			}
 		}
