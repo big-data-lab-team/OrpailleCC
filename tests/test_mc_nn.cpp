@@ -68,7 +68,7 @@ TEST(MCNN, split) {
 
 
 	for(int idx = 2; idx < 13; ++idx)
-		dataset[idx][0] = 20 + (rand()%4); //The new cluster should be around 21 on the first feature
+		dataset[idx][0] = 21; //The new cluster should be around 21 on the first feature
 
 	//Insert the two first instances to initialize the first micro-clusters
 	classifier.train(dataset[0], labels[0]);	
