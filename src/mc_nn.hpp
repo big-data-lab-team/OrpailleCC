@@ -147,7 +147,8 @@ class MCNN{
 	//Find the nearest cluster as well as the nearest cluster with the same class given a data point
 	void find_nearest_clusters(feature_type const* features, int const label, int& nearest, int& nearest_with_class) const{
 		//First find the nearest cluster
-		find_nearest_clusters(features, nearest);
+		double distance_nearest = -1;
+		find_nearest_clusters(features, nearest, &distance_nearest);
 		//If it turns out the nearest was the one with the same label, just return both
 		if(nearest >= 0 && clusters[nearest].label == label){
 			nearest_with_class = nearest;
@@ -170,9 +171,13 @@ class MCNN{
 			}
 		}
 		nearest_with_class = nearest_cluster;
+
+		//If the distance to the micro-cluster with the same class is the same as an other cluster which was picked, then replace nearest.
+		if(shortest_distance == distance_nearest)
+			nearest = nearest_with_class;
 	}
 	//Find the nearest cluster given a data point
-	void find_nearest_clusters(feature_type const* features, int& nearest) const{
+	void find_nearest_clusters(feature_type const* features, int& nearest, double* shortest = nullptr) const{
 		feature_type centroid[feature_count];
 		int nearest_cluster = -1;
 		double shortest_distance = 1000000;
@@ -192,6 +197,8 @@ class MCNN{
 		}
 		//NOTE: we should always have a nearest cluster except for the first data point.
 		nearest = nearest_cluster;
+		if(shortest != nullptr)
+			*shortest = shortest_distance;
 	}
 	//The sqrt implementation if needed.
 	double sqrt_local(double const val) const{
