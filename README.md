@@ -101,6 +101,15 @@ To run a performance test on your device, compile the performance tests with
 
 ![Alt](/figures/performance.png "An example of the performance output")
 
+### Coverage
+To observe the coverage of test function, run the following commands:
+```bash
+make clean
+make config=debug coverage
+```
+These commands will clean previous object files to rebuild them with the debug options, then run the test and gather the data for the coverage.
+To visualize the test coverage, simply open *out/index.html* into your favorite browser.
+
 # Examples
 This section provides the list of all algorithms implemented in OrpailleCC with a brief example.
 ## Lightweight Temporal Compression (LTC)
