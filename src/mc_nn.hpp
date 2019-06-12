@@ -24,12 +24,21 @@ class MCNN{
 		int label;
 		int error_count;
 		double initial_timestamp;
+		/*
+		 * Compute the variance for one feature.
+		 * @param features_idx the index of the feature.
+		 */
 		double variance(unsigned int const features_idx) const{
 			double const a = (double)features_square_sum[features_idx] / (double)data_count; //CF2X
 			double const b = (double)features_sum[features_idx] / (double)data_count; //CF1X
 			double const ret=a - b*b;
 			return ret;
 		}
+		/*
+		 * Incorporate a data point into the micro-cluster.
+		 * @param feature the data point.
+		 * @param timestamp the timestamp at which the data point has been added.
+		 */
 		void incorporate(feature_type const* features, double const timestamp){
 			timestamp_sum += timestamp;
 			timestamp_square_sum += timestamp * timestamp;
@@ -39,6 +48,10 @@ class MCNN{
 				features_square_sum[i] += features[i]*features[i];
 			}
 		}
+		/*
+		 * Compute the performance (or the participation) of the micro-cluster at a specific timestamp.
+		 * @param timestamp the current timestamp.
+		 */
 		double performance(double const current_timestamp) const{
 			double const current_tn = triangular_number(current_timestamp);
 			double const initial_tn = triangular_number(initial_timestamp);
@@ -46,6 +59,12 @@ class MCNN{
 			double const participation = timestamp_sum * (100 / real_tn);
 			return participation;
 		}
+		/*
+		 * Initialize a cluster.
+		 * @param features the first data point added to the cluster.
+		 * @param label the label of the cluster. (note, the label won't change for this cluster.)
+		 * @param timestamp the timestamp of the cluster.
+		 */
 		void initialize(feature_type const* features, int const label, double const timestamp){
 			initial_timestamp = timestamp;
 			timestamp_sum = timestamp;
@@ -58,11 +77,18 @@ class MCNN{
 				features_square_sum[i] = features[i]*features[i];
 			}
 		}
+		/*
+		 * Compute the data point corresponding to the center of the micro-cluster.
+		 * @param features the data point of the cluster (output).
+		 */
 		void centroid(feature_type* features) const{
 			for(int i = 0; i < feature_count; ++i){
 				features[i] = (double)features_sum[i] / (double)data_count;
 			}
 		}
+		/*
+		 * Overload of the = operator.
+		 */
 		cluster& operator=(const cluster& other){
 			if(this != &other){
 				for(int i = 0; i < feature_count; ++i){
@@ -108,6 +134,7 @@ class MCNN{
 		}
 		if(new_idx < 0){
 			//TODO what to do when there is no more space :]
+			//Remove the least performant cluster.
 		}
 
 		//Choose the attribute with the greatest variance, then do the split on it
