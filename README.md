@@ -1,11 +1,12 @@
 [![Build Status](https://travis-ci.org/azazel7/OrpailleCC.svg?branch=master)](https://travis-ci.org/azazel7/OrpailleCC)
 
 OrpailleCC is data stream library written in C++. It provides a consistent
-collection of data stream algorithms for embedded devices such as sensors.
-
-The library is based on C++ templates and does not use the STL library.  To start
-using a feature, just include the header files in your project and compile your
-project.
+collection of data stream algorithms for embedded devices. The goal of
+OrpailleCC is to support research on data stream mining for connected objects,
+by facilitating the comparison and benchmarking of algorithms in a consistent
+framework. It also enables programmers of embedded systems to use
+out-of-the-box algorithms with an efficient implementation.
+Algorithms from OrpailleCC are based on C++ templates and does not use the STL library.
 
 # Get started
 ## Hello World
