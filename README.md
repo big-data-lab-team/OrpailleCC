@@ -38,11 +38,57 @@ $ g++ -I./src -std=c++11 testy.cpp -o testy
 $ ./testy
 Hll
 ```
-## Use the library in your project
-Simply pick the code you need and add to your project.  You also need to add
-the C++11 (`-std=c++11`) flag to your compilation toolchain.
+## Install
+### Requirement
+As the collection is designed to run on embedded system without operating
+systems, OrpailleCC has very little dependencies and requirement.
 
-An alternative is to add `<OrpailleCC dir>/src` to the include paths of your compiler.
+- Git : to download the repository.
+- C++ compiler with C++11: to compile OrpailleCC files.
+- googletest: to run unit tests.
+- Linux Operating System: because all instructions are given for Linux systems. However, OrpailleCC should compile properly on a Windows system as long as a C++ compiler is available.
+
+### Installation
+To install OrpailleCC, first clone the repository. 
+```bash
+git clone https://github.com/big-data-lab-team/OrpailleCC.git
+```
+In this example, we assume that OrpailleCC is located in
+`/usr/include/OrpailleCC`. Change it accordingly to your system.
+```bash
+ORPAILLECC_DIR=/usr/include/OrpailleCC
+```
+
+To use OrpailleCC in your project add `ORPAILLECC_DIR/src` in the include directories of the project.
+Let's assume the project is the hello world example, located in *~/hello/hello.cpp*.
+
+```cpp
+#include <iostream> //Included for cout
+#include <reservoir_sampling.hpp>
+
+double randy(void){ //We need this function to provide a random number generator to ReservoirSampling.
+	return (double)rand() / (double)RAND_MAX; //On systems without rand, the programmer will have to define a pseudo-random function.
+}
+
+int main(){
+	char hello[] = "Hello-world!"; //Create a stream
+	ReservoirSampling<char, 3, randy> rs; //Instantiate a ReservoirSampling instance
+	//This instance works with char, contains a reservoir of size 3 and  use the randy function to generate random numbers.
+	for(int j = 0; j < 12; ++j) //Feed the ReservoirSampling instance with every element of the stream (here letters of the string)
+		rs.add(hello[j]);
+	for(int j = 0; j < 3; ++j) //Print every element in the reservoir
+		std::cout << rs[j];
+	std::cout << std::endl;
+	return 0;
+}
+```
+
+To compile this code (that use the ReservoirSampling object), you need to run the following commands.
+
+```bash
+cd ~/hello
+g++ -std=c++11 -I$ORPAILLECC_DIR hello.c
+```
 
 ## Test
 ### Unit Test
