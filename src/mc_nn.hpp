@@ -94,7 +94,10 @@ class MCNN{
 		return ((t*t + t) * 0.5);
 	}
 
-	//Function to split a cluster
+	/*
+	 * Function to split a cluster
+	 * @param cluster_idx the index of the cluster to split.
+	 */
 	void split(int const cluster_idx){
 		int new_idx = -1;
 		for(int i = 0; i < max_cluster; ++i){
@@ -136,7 +139,11 @@ class MCNN{
 		active[new_idx] = true;
 		count_active_cluster += 1;
 	}
-	//Compute the squared distance between two data point
+	/*
+	 * Compute the squared distance between two data point.
+	 * @param e1 data point 1.
+	 * @param e2 data point 2.
+	 */
 	double euclidean_distance(feature_type const* e1, feature_type const* e2) const{
 		double squared_sum = 0;
 		for(int i = 0; i < feature_count; ++i)
@@ -144,7 +151,13 @@ class MCNN{
 		//NOTE: Not really a distance :D
 		return squared_sum;
 	}
-	//Find the nearest cluster as well as the nearest cluster with the same class given a data point
+	/*
+	 * Find the nearest cluster as well as the nearest cluster with the same class given a data point.
+	 * @param features the data point features.
+	 * @param label the label (or class) of the data point.
+	 * @param nearest the nearest cluster of the data point (output).
+	 * @param nearest_with_class the nearest cluster of the data point that has the same label as the data point (output).
+	 */
 	void find_nearest_clusters(feature_type const* features, int const label, int& nearest, int& nearest_with_class) const{
 		//First find the nearest cluster
 		double distance_nearest = -1;
@@ -176,7 +189,12 @@ class MCNN{
 		if(shortest_distance == distance_nearest)
 			nearest = nearest_with_class;
 	}
-	//Find the nearest cluster given a data point
+	/*
+	 * Find the nearest cluster given a data point.
+	 * @param features the data point features.
+	 * @param nearest the nearest cluster of the data point (output).
+	 * @param shortest if not null, contains the squared distance between the data point and the nearest cluster.
+	 */
 	void find_nearest_clusters(feature_type const* features, int& nearest, double* shortest = nullptr) const{
 		feature_type centroid[feature_count];
 		int nearest_cluster = -1;
@@ -200,7 +218,10 @@ class MCNN{
 		if(shortest != nullptr)
 			*shortest = shortest_distance;
 	}
-	//The sqrt implementation if needed.
+	/*
+	 * The sqrt implementation if needed.
+	 * @param val the number to compute the square root.
+	 */
 	double sqrt_local(double const val) const{
 		return sqrt(val); //TODO: to change
 	}

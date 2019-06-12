@@ -27,11 +27,20 @@ class CuckooFilter{
 	static unsigned int const total_size = ceil((double)bucket_count*bucket_size*entry_size / (double)BYTE_SIZE);
 	unsigned char filter[total_size] = {0};
 
+	/* 
+	 * Access a bit in the filter.
+	 * @param bit_index the index of the bit to access in the entire filter.
+	 */
 	unsigned char get_bit(unsigned int const bit_index) const{
 		unsigned int const mod = bit_index % BYTE_SIZE;
 		unsigned int const byte_index = (bit_index - mod) / BYTE_SIZE;
 		return (filter[byte_index] & (1 << mod) != 0);
 	}
+	/* 
+	 * Set a bit in the filter.
+	 * @param bit_index the index of the bit to set in the entire filter.
+	 * @param value the new value of the bit (0 or 1).
+	 */
 	void set_bit(unsigned int const bit_index, unsigned int const value){
 		unsigned int const mod = bit_index % BYTE_SIZE;
 		unsigned int const byte_index = (bit_index - mod) / BYTE_SIZE;
@@ -40,6 +49,11 @@ class CuckooFilter{
 		else
 			filter[byte_index] = filter[byte_index] | (1 << mod);
 	}
+	/*
+	 * Access a fingerprint in the filter.
+	 * @param bucket_index the index of the bucket.
+	 * @param entry_index the index of the fingerprint in that bucket.
+	 */
 	fingerprint_t get_entry(unsigned int const bucket_index, unsigned int const entry_index) const{
 		assert(bucket_index >= 0 && bucket_index < bucket_count);
 		assert(bucket_size >= 0 && entry_index < bucket_size);
@@ -67,6 +81,12 @@ class CuckooFilter{
 		}
 		return tmp;
 	}
+	/*
+	 * Set a fingerprint in the filter.
+	 * @param bucket_index the index of the bucket.
+	 * @param entry_index the index of the fingerprint in that bucket.
+	 * @param fp the new value of the finger print.
+	 */
 	void set_entry(unsigned int const bucket_index, unsigned int const entry_index, fingerprint_t const fp){
 		assert(bucket_index >= 0 && bucket_index < bucket_count);
 		assert(bucket_size >= 0 && entry_index < bucket_size);
@@ -85,6 +105,10 @@ class CuckooFilter{
 			set_bit(bi, value);
 		}
 	}
+	/*
+	 * Compute the number of empty entry in a bucket.
+	 * @param bucket_index the index of the bucket.
+	 */
 	int space_in_bucket(unsigned int const bucket_index){
 		fingerprint_t tmp;
 		for(int i = 0; i < bucket_size; ++i){
@@ -94,6 +118,13 @@ class CuckooFilter{
 		}
 		return -1; //return index available, -1 otherwise
 	}
+	/*
+	 * Search an element in the filter.
+	 * @param e the element to search for.
+	 * @param bucket_index the bucket_index that contain the element (output).
+	 * @param entry_index the index of the fingerprint in the bucket (output).
+	 * @return true if the element is found.
+	 */
 	bool search(element_type const* e, unsigned int& bucket_index, unsigned int& entry_index) const{
 		fingerprint_t fp = funct::fingerprint(e);
 		unsigned int h[2];

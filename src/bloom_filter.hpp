@@ -91,12 +91,20 @@ class BloomFilter{
 	}
 
 	private:
+	/*
+	 * Set a specific bit to 1 in the bit array.
+	 * @param index the index of the bit to set to one.
+	 */
 	void set_bit_to_one(int const index){
 		assert(index >= 0 && index < bit_size);
 		unsigned int const mod = index % BYTE_SIZE;
 		unsigned int const real_index = (index - mod) / BYTE_SIZE;
 		bits[real_index] = bits[real_index] | (1 << mod);
 	}
+	/*
+	 * Access the value of a bit in the bit array.
+	 * @param index the index of the bit to access.
+	 */
 	int get_bit(int const index) const{
 		assert(index >= 0 && index < bit_size);
 		unsigned int const mod = index % BYTE_SIZE;

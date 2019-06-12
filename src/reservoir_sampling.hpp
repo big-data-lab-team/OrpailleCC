@@ -9,6 +9,7 @@
 template<class element_type, unsigned int sample_size, double (*random_function)()>
 class ReservoirSampling{
 	element_type sample[sample_size];
+	//Count the number of element seen so far
 	unsigned int counter = 0;
 
 	/**

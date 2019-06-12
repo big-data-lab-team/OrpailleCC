@@ -9,6 +9,9 @@
  */
 template<class element_type, class timestamp_type, int epsilon, int max_value=32767, int min_value=-32768, int time_unit_difference=1>
 class LTC{
+	/*
+	 * Internal structure to describe a data point.
+	 */
 	struct data_point{
 		timestamp_type timestamp;
 		element_type value;
@@ -17,28 +20,45 @@ class LTC{
 
 	int counter = 0; //Counter make sure the algorithm does not fail for the first 3 values
 
+	/*
+	 * Return the minimum between a and b.
+	 */
 	template<typename K>
 	static K min(K const a, K const b){
 		if(a > b)
 			return b;
 		return a;
 	}
+	/*
+	 * Return the maximum between a and b.
+	 */
 	template<typename K>
 	static K max(K const a, K const b){
 		if(a < b)
 			return b;
 		return a;
 	}
+	/*
+	 * Set the upper and lower limit.
+	 */
 	void set_ul_and_ll(void){
 		UL = new_ul;
 		LL = new_ll;
 	}
+	/*
+	 * Update the upper and lower limit based on a new data point.
+	 * @param timestamp the timestamp of the data point.
+	 * @param value The value of the data point.
+	 */
 	void update(timestamp_type const timestamp, element_type const value){
 		new_ul.timestamp = timestamp;
 		new_ul.value = min(value + epsilon, max_value);
 		new_ll.timestamp = timestamp;
 		new_ll.value = max(value - epsilon, min_value);
 	}
+	/*
+	 * Compute the need to transmit the compress data point.
+	 */
 	bool need_transmit(void){
 		double old_up_deriva = (double)(UL.value - last_transmit_point.value) / (UL.timestamp - last_transmit_point.timestamp) / time_unit_difference;
 		double old_low_deriva = (double)(LL.value - last_transmit_point.value) / (LL.timestamp - last_transmit_point.timestamp) / time_unit_difference;
@@ -58,6 +78,9 @@ class LTC{
 		return false;
 	}
 	public:
+	/*
+	 * Default constructor.
+	 */
 	LTC(){
 	}
 	/**
