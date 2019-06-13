@@ -30,10 +30,10 @@ run_test: test
 	./$(EXE)-test
 
 coverage: run_test
-	mkdir out
+	mkdir coverage
 	gcov test
 	lcov -c --directory . --output-file coverage.info --no-external
-	genhtml coverage.info --output-directory out
+	genhtml coverage.info --output-directory coverage
 
 %.o: %.c
 	gcc -std=c99 $< -c -o $@
@@ -43,5 +43,5 @@ coverage: run_test
 
 clean:
 	rm -f *.o *.oo $(TEST_DIR)/*.oo $(SRC_DIR)/*.oo $(EXE) $(EXE)-test $(EXE)-perf
-	rm -rf out 
+	rm -rf coverage 
 	rm -f test.gcda test.gcno $(TEST_DIR)/*.gcda $(TEST_DIR)/*.gcno coverage.info

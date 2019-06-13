@@ -109,7 +109,7 @@ make clean
 make config=debug coverage
 ```
 These commands will clean previous object files to rebuild them with the debug options, then run the test and gather the data for the coverage.
-To visualize the test coverage, simply open *out/index.html* into your favorite browser.
+To visualize the test coverage, simply open *coverage/index.html* into your favorite browser.
 
 # Examples
 This section provides the list of all algorithms implemented in OrpailleCC with a brief example.
