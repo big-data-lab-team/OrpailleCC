@@ -55,7 +55,7 @@ class MCNN{
 		double performance(double const current_timestamp) const{
 			double const current_tn = triangular_number(current_timestamp);
 			double const initial_tn = triangular_number(initial_timestamp);
-			double const real_tn = current_timestamp - initial_timestamp;
+			double const real_tn = current_tn - initial_tn;
 			double const participation = timestamp_sum * (100 / real_tn);
 			return participation;
 		}
