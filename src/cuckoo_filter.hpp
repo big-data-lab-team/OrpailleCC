@@ -110,8 +110,8 @@ class CuckooFilter{
 	 * @param bucket_index the index of the bucket.
 	 */
 	int space_in_bucket(unsigned int const bucket_index){
-		fingerprint_t tmp;
 		for(int i = 0; i < bucket_size; ++i){
+			fingerprint_t tmp;
 			tmp = get_entry(bucket_index, i);
 			if(tmp == empty_value)
 				return i;
