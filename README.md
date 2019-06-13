@@ -1,9 +1,9 @@
 <div align="center">
 <hr/>
 <h1>OrpailleCC</h1>
+<a href="https://travis-ci.org/azazel7/OrpailleCC"><img src="https://travis-ci.org/azazel7/OrpailleCC.svg?branch=master"></a>
+<a href="https://app.codacy.com/app/azazel7/OrpailleCC?utm_source=github.com&utm_medium=referral&utm_content=azazel7/OrpailleCC&utm_campaign=Badge_Grade_Dashboard"><img src="https://api.codacy.com/project/badge/Grade/0d8b194e7b1148f7a6bb3c0ba19c9309"></a>
 </div>	
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/0d8b194e7b1148f7a6bb3c0ba19c9309)](https://app.codacy.com/app/azazel7/OrpailleCC?utm_source=github.com&utm_medium=referral&utm_content=azazel7/OrpailleCC&utm_campaign=Badge_Grade_Dashboard)
-[![Build Status](https://travis-ci.org/azazel7/OrpailleCC.svg?branch=master)](https://travis-ci.org/azazel7/OrpailleCC)
 
 OrpailleCC is data stream library written in C++. It provides a consistent
 collection of data stream algorithms for embedded devices. The goal of
