@@ -24,12 +24,21 @@ class MCNN{
 		int label;
 		int error_count;
 		double initial_timestamp;
+		/*
+		 * Compute the variance for one feature.
+		 * @param features_idx the index of the feature.
+		 */
 		double variance(unsigned int const features_idx) const{
 			double const a = (double)features_square_sum[features_idx] / (double)data_count; //CF2X
 			double const b = (double)features_sum[features_idx] / (double)data_count; //CF1X
 			double const ret=a - b*b;
 			return ret;
 		}
+		/*
+		 * Incorporate a data point into the micro-cluster.
+		 * @param feature the data point.
+		 * @param timestamp the timestamp at which the data point has been added.
+		 */
 		void incorporate(feature_type const* features, double const timestamp){
 			timestamp_sum += timestamp;
 			timestamp_square_sum += timestamp * timestamp;
@@ -39,13 +48,23 @@ class MCNN{
 				features_square_sum[i] += features[i]*features[i];
 			}
 		}
+		/*
+		 * Compute the performance (or the participation) of the micro-cluster at a specific timestamp.
+		 * @param timestamp the current timestamp.
+		 */
 		double performance(double const current_timestamp) const{
 			double const current_tn = triangular_number(current_timestamp);
 			double const initial_tn = triangular_number(initial_timestamp);
-			double const real_tn = current_timestamp - initial_timestamp;
+			double const real_tn = current_tn - initial_tn;
 			double const participation = timestamp_sum * (100 / real_tn);
 			return participation;
 		}
+		/*
+		 * Initialize a cluster.
+		 * @param features the first data point added to the cluster.
+		 * @param label the label of the cluster. (note, the label won't change for this cluster.)
+		 * @param timestamp the timestamp of the cluster.
+		 */
 		void initialize(feature_type const* features, int const label, double const timestamp){
 			initial_timestamp = timestamp;
 			timestamp_sum = timestamp;
@@ -58,11 +77,18 @@ class MCNN{
 				features_square_sum[i] = features[i]*features[i];
 			}
 		}
+		/*
+		 * Compute the data point corresponding to the center of the micro-cluster.
+		 * @param features the data point of the cluster (output).
+		 */
 		void centroid(feature_type* features) const{
 			for(int i = 0; i < feature_count; ++i){
 				features[i] = (double)features_sum[i] / (double)data_count;
 			}
 		}
+		/*
+		 * Overload of the = operator.
+		 */
 		cluster& operator=(const cluster& other){
 			if(this != &other){
 				for(int i = 0; i < feature_count; ++i){
@@ -94,7 +120,10 @@ class MCNN{
 		return ((t*t + t) * 0.5);
 	}
 
-	//Function to split a cluster
+	/*
+	 * Function to split a cluster
+	 * @param cluster_idx the index of the cluster to split.
+	 */
 	void split(int const cluster_idx){
 		int new_idx = -1;
 		for(int i = 0; i < max_cluster; ++i){
@@ -105,6 +134,7 @@ class MCNN{
 		}
 		if(new_idx < 0){
 			//TODO what to do when there is no more space :]
+			//Remove the least performant cluster.
 		}
 
 		//Choose the attribute with the greatest variance, then do the split on it
@@ -136,7 +166,11 @@ class MCNN{
 		active[new_idx] = true;
 		count_active_cluster += 1;
 	}
-	//Compute the squared distance between two data point
+	/*
+	 * Compute the squared distance between two data point.
+	 * @param e1 data point 1.
+	 * @param e2 data point 2.
+	 */
 	double euclidean_distance(feature_type const* e1, feature_type const* e2) const{
 		double squared_sum = 0;
 		for(int i = 0; i < feature_count; ++i)
@@ -144,7 +178,13 @@ class MCNN{
 		//NOTE: Not really a distance :D
 		return squared_sum;
 	}
-	//Find the nearest cluster as well as the nearest cluster with the same class given a data point
+	/*
+	 * Find the nearest cluster as well as the nearest cluster with the same class given a data point.
+	 * @param features the data point features.
+	 * @param label the label (or class) of the data point.
+	 * @param nearest the nearest cluster of the data point (output).
+	 * @param nearest_with_class the nearest cluster of the data point that has the same label as the data point (output).
+	 */
 	void find_nearest_clusters(feature_type const* features, int const label, int& nearest, int& nearest_with_class) const{
 		//First find the nearest cluster
 		double distance_nearest = -1;
@@ -176,7 +216,12 @@ class MCNN{
 		if(shortest_distance == distance_nearest)
 			nearest = nearest_with_class;
 	}
-	//Find the nearest cluster given a data point
+	/*
+	 * Find the nearest cluster given a data point.
+	 * @param features the data point features.
+	 * @param nearest the nearest cluster of the data point (output).
+	 * @param shortest if not null, contains the squared distance between the data point and the nearest cluster.
+	 */
 	void find_nearest_clusters(feature_type const* features, int& nearest, double* shortest = nullptr) const{
 		feature_type centroid[feature_count];
 		int nearest_cluster = -1;
@@ -200,7 +245,10 @@ class MCNN{
 		if(shortest != nullptr)
 			*shortest = shortest_distance;
 	}
-	//The sqrt implementation if needed.
+	/*
+	 * The sqrt implementation if needed.
+	 * @param val the number to compute the square root.
+	 */
 	double sqrt_local(double const val) const{
 		return sqrt(val); //TODO: to change
 	}

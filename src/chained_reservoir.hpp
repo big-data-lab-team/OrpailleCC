@@ -9,14 +9,21 @@
  */
 template<class element_type, unsigned int sample_size, double (*random_function)(), class funct>
 class ChainedReservoirSampling{
+	/*
+	 * Internal structure for the node of the linked list.
+	 */
 	struct node {
+		/*A pointer to the next element in the list*/
 		node* next;
+		/*The element store*/
 		element_type element;
+		/*The timestamp of the element so we can discard it when it gets obsolete.*/
 		unsigned int timestamp;
 	};
 	node sample[sample_size];
 	//`next` is not inside the node structure because once next is used for a node, it is not used again
 	unsigned int next[sample_size];
+	//The number of element seen so for by the reservoir.
 	unsigned int counter = 0;
 
 	/**
@@ -69,7 +76,12 @@ class ChainedReservoirSampling{
 		assert(false);
 		//TODO maybe clear the chain if it is corrupted
 	}
-	void shift_chain(node& head, node& current){
+	/*
+	 * Shift the node from current to head.
+	 * @param head the to start replacing from.
+	 * @param current the node that should replace head.
+	 */
+	void shift_chain(node& head, node& current){//TODO improve this to avoid overwriting elements
 		node& receiver = head;
 		node& mover = current;
 		while(1){//TODO add security
@@ -99,7 +111,7 @@ class ChainedReservoirSampling{
 			current.timestamp = 0;
 		}
 		for(int i = 0; i < sample_size; ++i)
-			next[i] = 4294967294; //`next` cannot be negative so to avoid 0 to be assign to all sample, I set it to the maximum
+			next[i] = 4294967294; //`next` cannot be negative so to avoid 0 to be assign to all sample, it is set to the maximum for an int
 	}
 	/**
 	 * Sample one new element into the sample. This new element may not be added.
@@ -147,11 +159,8 @@ class ChainedReservoirSampling{
 		return sample[i].element;
 	}
 	/*
-	 * Declare a timestamp and all anterior timestamp obsolete
+	 * Declare a timestamp and all anterior timestamp obsolete. All element with obsolete timestamp will be discarded.
 	 * @param timestamp the timestamp to declare obsolete
-	 */
-	/** Set a new obsolete timestamp. All element with a timestamp prior to this timestamp will be discarded.
-	 * @param timestamp a new obsolete timestamp.
 	 */
 	void obsolete(unsigned int const timestamp){
 		for(int i = 0; i < sample_size; ++i){

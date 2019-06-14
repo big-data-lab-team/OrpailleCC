@@ -11,6 +11,7 @@ TEST(MCNN, one) {
 	classifier.train(dataset, label);	
 	auto predict = classifier.predict(dataset);
 	EXPECT_EQ (label, predict);
+	free(dataset);
 }
 TEST(MCNN, insert_once) { 
 	/*
@@ -32,6 +33,7 @@ TEST(MCNN, insert_once) {
 		auto predict = classifier.predict(dataset + (i*4));
 		EXPECT_EQ (labels[i], predict);
 	}
+	free(dataset);
 }
 TEST(MCNN, same_class) { 
 	MCNN<int, 4> mcnn();
@@ -49,6 +51,7 @@ TEST(MCNN, same_class) {
 		auto predict = classifier.predict(dataset + (i*4));
 		EXPECT_EQ (label, predict);
 	}
+	free(dataset);
 }
 TEST(MCNN, split) { 
 	int dataset_size = 13;

@@ -1,15 +1,21 @@
-[![Build Status](https://travis-ci.org/azazel7/OrpailleCC.svg?branch=master)](https://travis-ci.org/azazel7/OrpailleCC)
+<div align="center">
+<hr/>
+<h1>OrpailleCC</h1>
+<a href="https://travis-ci.org/azazel7/OrpailleCC"><img src="https://travis-ci.org/azazel7/OrpailleCC.svg?branch=master"></a>
+<a href="https://app.codacy.com/app/azazel7/OrpailleCC?utm_source=github.com&utm_medium=referral&utm_content=azazel7/OrpailleCC&utm_campaign=Badge_Grade_Dashboard"><img src="https://api.codacy.com/project/badge/Grade/0d8b194e7b1148f7a6bb3c0ba19c9309"></a>
+</div>	
 
 OrpailleCC is data stream library written in C++. It provides a consistent
-collection of data stream algorithms for embedded devices such as sensors.
+collection of data stream algorithms for embedded devices. The goal of
+OrpailleCC is to support research on data stream mining for connected objects,
+by facilitating the comparison and benchmarking of algorithms in a consistent
+framework. It also enables programmers of embedded systems to use
+out-of-the-box algorithms with an efficient implementation.
+Algorithms from OrpailleCC are based on C++ templates and does not use the STL library.
 
-The library is based on C++ templates and does not use the STL library.  To start
-using a feature, just include the header files in your project and compile your
-project.
-
-# Get started
-## Hello World
-Let us run a basic example with a reservoir sampling [4] of size 3.
+## Get started
+### Hello World
+Let us run a basic example with a reservoir sampling \[4] of size 3.
 Save the following code in *testy.cpp*.
 ```cpp
 #include <iostream> //Included for cout
@@ -38,27 +44,82 @@ $ g++ -I./src -std=c++11 testy.cpp -o testy
 $ ./testy
 Hll
 ```
-## Use the library in your project
-Simply pick the code you need and add to your project.  You also need to add
-the C++11 (`-std=c++11`) flag to your compilation toolchain.
+### Install
+#### Requirement
+As the collection is designed to run on embedded system without operating
+systems, OrpailleCC has very little dependencies and requirement.
 
-An alternative is to add `<OrpailleCC dir>/src` to the include paths of your compiler.
+- Git : to download the repository.
+- C++ compiler with C++11: to compile OrpailleCC files.
+- googletest: to run unit tests.
+- Linux Operating System: because all instructions are given for Linux systems. However, OrpailleCC should compile properly on a Windows system as long as a C++ compiler is available.
 
-## Test
-### Unit Test
+#### Installation
+To install OrpailleCC, first clone the repository. 
+```bash
+git clone https://github.com/big-data-lab-team/OrpailleCC.git
+```
+In this example, we assume that OrpailleCC is located in
+`/usr/include/OrpailleCC`. Change it accordingly to your system.
+```bash
+ORPAILLECC_DIR=/usr/include/OrpailleCC
+```
+
+To use OrpailleCC in your project add `ORPAILLECC_DIR/src` in the include directories of the project.
+Let's assume the project is the hello world example, located in *~/hello/hello.cpp*.
+
+```cpp
+#include <iostream> //Included for cout
+#include <reservoir_sampling.hpp>
+
+double randy(void){ //We need this function to provide a random number generator to ReservoirSampling.
+	return (double)rand() / (double)RAND_MAX; //On systems without rand, the programmer will have to define a pseudo-random function.
+}
+
+int main(){
+	char hello[] = "Hello-world!"; //Create a stream
+	ReservoirSampling<char, 3, randy> rs; //Instantiate a ReservoirSampling instance
+	//This instance works with char, contains a reservoir of size 3 and  use the randy function to generate random numbers.
+	for(int j = 0; j < 12; ++j) //Feed the ReservoirSampling instance with every element of the stream (here letters of the string)
+		rs.add(hello[j]);
+	for(int j = 0; j < 3; ++j) //Print every element in the reservoir
+		std::cout << rs[j];
+	std::cout << std::endl;
+	return 0;
+}
+```
+
+To compile this code (that use the ReservoirSampling object), you need to run the following commands.
+
+```bash
+cd ~/hello
+g++ -std=c++11 -I$ORPAILLECC_DIR hello.c
+```
+
+### Test
+#### Unit Test
 The unit tests require the `googletest` library ([Here](https://github.com/google/googletest)).
 To run the unit tests, run the command `make run_test`.
 
-### Performance
+#### Performance
 To run a performance test on your device, compile the performance tests with
 `make perf` then run `./main-perf`.
 
 ![Alt](/figures/performance.png "An example of the performance output")
 
-# Examples
+#### Coverage
+To observe the coverage of test function, run the following commands:
+```bash
+make clean
+make config=debug coverage
+```
+These commands will clean previous object files to rebuild them with the debug options, then run the test and gather the data for the coverage.
+To visualize the test coverage, simply open *coverage/index.html* into your favorite browser.
+
+## Examples
 This section provides the list of all algorithms implemented in OrpailleCC with a brief example.
-## Lightweight Temporal Compression (LTC)
-LTC [0] is a compression algorithm that approximates a series of values with a linear
+### Lightweight Temporal Compression (LTC)
+LTC \[0] is a compression algorithm that approximates a series of values with a linear
 function. The epsilon parameter controls the amount of compression. If the
 linear approximation isn't accurate enough, then a new point is
 issued.
@@ -82,8 +143,8 @@ int main(){
 	}
 }
 ```
-## Micro-Cluster Nearest Neighbour (MC-NN)
-MC-NN [3] is a classifier based on k-nearest neighbours. It aggregates the data
+### Micro-Cluster Nearest Neighbour (MC-NN)
+MC-NN \[3] is a classifier based on k-nearest neighbours. It aggregates the data
 points into micro-clusters and make them evolve to catch concept drifts.
 
 ```cpp
@@ -125,9 +186,9 @@ int main(){
 	return 0;
 }
 ```
-## Reservoir Sampling
+### Reservoir Sampling
 The next example is the one used as a hello world example. A Reservoir 
-Sample [4] is a fixed-sized sample of the stream where all elements have 
+Sample \[4] is a fixed-sized sample of the stream where all elements have 
 equal probability to appear.
 ```cpp
 #include <iostream> //Included for cout
@@ -149,8 +210,8 @@ int main(){
 	return 0;
 }
 ```
-## Chained Reservoir Sampling
-The chained reservoir sampling [1] is a variant of the reservoir sampling that allows discarding outdated data while maintaining the reservoir distribution.
+### Chained Reservoir Sampling
+The chained reservoir sampling \[1] is a variant of the reservoir sampling that allows discarding outdated data while maintaining the reservoir distribution.
 
 ```cpp
 #include <iostream> //Included for cout
@@ -189,8 +250,8 @@ int main(){
 	std::cout << std::endl;
 }
 ```
-## Bloom Filter
-The Bloom filter [5] excludes elements from the stream when they don't belong to 
+### Bloom Filter
+The Bloom filter \[5] excludes elements from the stream when they don't belong to 
 a pre-defined set.
 ```cpp
 #include <iostream> //Included for cout
@@ -224,8 +285,8 @@ int main(){
 ```
 Note that, due to the Bloom Filter size, more than three elements will be recognized by the filter.
 
-## Cuckoo Filter
-The Cuckoo filter [2] is used when elements have to be removed from the pre-defined 
+### Cuckoo Filter
+The Cuckoo filter \[2] is used when elements have to be removed from the pre-defined 
 set of accepted elements.
 ```cpp
 #include <iostream> //Included for cout
@@ -270,17 +331,17 @@ int main() {
 }
 ```
 
-# How can I help?
+## How can I help?
 - Report issues and seek support in the Issues tab.
 - Write new examples or improve existing examples and share them with a pull request. 
 - Submit ideas for future algorithms to integrate.
 - Submit pull requests with algorithm implementation.
 - Submit pull requests with additional test cases.
 
-# References
-- [0] Schoellhammer, Tom and Greenstein, Ben and Osterweil, Eric and Wimbrow, Michael and Estrin, Deborah (2004), "Lightweight temporal compression of microclimate datasets"
-- [1] Babcock, Brian and Datar, Mayur and Motwani, Rajeev (2002), "Sampling from a moving window over streaming data", Proceedings of the thirteenth annual Association for Computing Machinery-SIAM symposium on Discrete algorithms, pages 633--634
-- [2] Fan, Bin and Andersen, Dave G and Kaminsky, Michael and Mitzenmacher, Michael (2014), "Cuckoo filter: Practically better than bloom", Proceedings of the 10th Association for Computing Machinery International on Conference on emerging Networking Experiments and Technologies, pages 75--88
-- [3] Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
-- [4] Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
-- [5] Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
+## References
+-  \[0] Schoellhammer, Tom and Greenstein, Ben and Osterweil, Eric and Wimbrow, Michael and Estrin, Deborah (2004), "Lightweight temporal compression of microclimate datasets"
+-  \[1] Babcock, Brian and Datar, Mayur and Motwani, Rajeev (2002), "Sampling from a moving window over streaming data", Proceedings of the thirteenth annual Association for Computing Machinery-SIAM symposium on Discrete algorithms, pages 633--634
+-  \[2] Fan, Bin and Andersen, Dave G and Kaminsky, Michael and Mitzenmacher, Michael (2014), "Cuckoo filter: Practically better than bloom", Proceedings of the 10th Association for Computing Machinery International on Conference on emerging Networking Experiments and Technologies, pages 75--88
+-  \[3] Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
+-  \[4] Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
+-  \[5] Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
