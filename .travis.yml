@@ -17,6 +17,9 @@ before_install:
   - cd -
 script:
  - make run_test
+ - make clean
+ - make config=debug coverage
+ - make clean
  - make perf
  - ./main-perf
 
