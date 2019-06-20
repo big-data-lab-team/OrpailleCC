@@ -1,8 +1,9 @@
 <div align="center">
 <hr/>
 <h1>OrpailleCC</h1>
-<a href="https://travis-ci.org/azazel7/OrpailleCC"><img src="https://travis-ci.org/azazel7/OrpailleCC.svg?branch=master"></a>
-<a href="https://app.codacy.com/app/azazel7/OrpailleCC?utm_source=github.com&utm_medium=referral&utm_content=azazel7/OrpailleCC&utm_campaign=Badge_Grade_Dashboard"><img src="https://api.codacy.com/project/badge/Grade/0d8b194e7b1148f7a6bb3c0ba19c9309"></a>
+<a href="https://travis-ci.org/big-data-lab-team/OrpailleCC"><img src="https://travis-ci.org/big-data-lab-team/OrpailleCC.svg?branch=master"></a>
+<a href="https://www.codacy.com/app/glatard/OrpailleCC?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=big-data-lab-team/OrpailleCC&amp;utm_campaign=Badge_Grade"><img src="https://api.codacy.com/project/badge/Grade/2746a0cd00d34441a6f7dcf1558f1089"/></a>
+<a href="https://zenodo.org/badge/latestdoi/170758788"><img src="https://zenodo.org/badge/170758788.svg" alt="DOI"></a>
 </div>	
 
 OrpailleCC is data stream library written in C++. It provides a consistent
