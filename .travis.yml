@@ -7,6 +7,7 @@ before_install:
   - sudo apt-get install -y libgtest-dev
   - sudo apt-get install -y g++-7
   - sudo apt-get install -y cmake
+  - sudo apt-get install -y lcov
   - cd /usr/src/gtest
   - sudo cmake CMakeLists.txt
   - sudo make -j 16
@@ -17,6 +18,9 @@ before_install:
   - cd -
 script:
  - make run_test
+ - make clean
+ - make config=debug coverage
+ - make clean
  - make perf
  - ./main-perf
 
