@@ -1,22 +1,22 @@
 ---
 title: 'OrpailleCC: a Library for Data Stream Analysis on Embedded Systems'
 tags:
-  - C++
-  - data stream
-  - embedded systems
+ - C++
+ - data stream
+ - embedded systems
 authors:
-  - name: Martin Khannouz
-    orcid: 0000-0003-2129-5517
-    affiliation: 1
-  - name: Bo Li
-    orcid: 0000-0003-4207-5070 
-    affiliation: 1
-  - name: Tristan Glatard
-    orcid: 0000-0003-2620-5883
-    affiliation: 1
+ - name: Martin Khannouz
+   orcid: 0000-0003-2129-5517
+   affiliation: 1
+ - name: Bo Li
+   orcid: 0000-0003-4207-5070 
+   affiliation: 1
+ - name: Tristan Glatard
+   orcid: 0000-0003-2620-5883
+   affiliation: 1
 affiliations:
-  - name: Department of Computer Science and Software Engineering, Concordia University, Montreal, Canada
-    index: 1
+ - name: Department of Computer Science and Software Engineering, Concordia University, Montreal, Canada
+   index: 1
 date: 29 March 2019
 bibliography: paper.bib
 ---
@@ -43,24 +43,24 @@ Nevertheless, for more powerful devices such as desktop computers, Java
 frameworks such as Massive Online Analysis and WEKA achieve
 similar goals as OrpailleCC.
 
-OrpailleCC targets the classes of problems discussed in [@kejariwal2015],
+OrpailleCC targets the classes of problems discussed in ,
  in particular Sampling and 
 Filtering. Sampling covers algorithms that 
 build a representative sample of a
 data stream. OrpailleCC implements the reservoir
-sampling [@reservoir_sampling] and one variant, the chained reservoir
-sampling [@chained_reservoir_sampling]. Filtering algorithms
+sampling  and one variant, the chained reservoir
+sampling  Filtering algorithms
 remove the stream elements that do not belong to a specific set.
-OrpailleCC implements the Bloom Filter [@bloom] and the Cuckoo
-Filter [@cuckoo_filter], two well-tested algorithms that address this
+OrpailleCC implements the Bloom Filter  and the Cuckoo
+Filter  two well-tested algorithms that address this
 problem.
 
 In addition to Sampling and Filtering, OrpailleCC
 provides algorithms for stream Classification and for stream Compression. The 
-Micro-Cluster Nearest Neighbour algorithm [@mc-nn] is based on the 
+Micro-Cluster Nearest Neighbour algorithm  is based on the 
 k-nearest neighbor to classify a data stream while detecting concept 
-drifts. The Lightweight Temporal Compression [@ltc] and a 
-multi-dimensional variant [@ltcd] are two methods to compress data 
+drifts. The Lightweight Temporal Compression  and a 
+multi-dimensional variant  are two methods to compress data 
 streams.
 
 All implementations rely as little as possible on functions provided by the 
@@ -68,7 +68,7 @@ operating system, for instance `malloc`, since such functions are typically
 not available on embedded systems. When algorithms cannot be
 implemented without such functions, the library uses template parameters to 
 request the required functions from the user.  All algorithms are 
-developed for FreeRTOS [@freertos], a free real-time operating 
+developed for FreeRTOS  a free real-time operating 
 system used in embedded systems, but they should work on any 
 micro-controller with a C++11 compiler. The C++11 programming language 
 was chosen for its performance as well as its popularity in the 
