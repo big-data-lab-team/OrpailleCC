@@ -40,7 +40,7 @@ To the best of our knowledge, existing libraries of stream mining
 algorithms cannot be used on connected objects due to their resource consumption or
 assumptions about the target system (e.g., existence of a `malloc` function).
 Nevertheless, for more powerful devices such as desktop computers, Java
-frameworks such as Massive Online Analysis [@moa] and WEKA [@weka] achieve
+frameworks such as Massive Online Analysis and WEKA achieve
 similar goals as OrpailleCC.
 
 OrpailleCC targets the classes of problems discussed in [@kejariwal2015],
