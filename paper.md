@@ -15,6 +15,8 @@ authors:
    orcid: 0000-0003-2620-5883
    affiliation: 1
 affiliations:
+- index: 1
+  name: Concordia University
 date: 29 March 2019
 bibliography: paper.bib
 ---
