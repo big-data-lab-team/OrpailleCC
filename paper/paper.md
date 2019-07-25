@@ -43,8 +43,8 @@ Nevertheless, for more powerful devices such as desktop computers, Java
 frameworks such as Massive Online Analysis [@moa] and WEKA [@weka] achieve
 similar goals as OrpailleCC.
 
-OrpailleCC targets the classes of problems discussed in [@kejariwal2015],
- in particular Sampling and 
+OrpailleCC targets the classes of problems discussed by @kejariwal2015,
+in particular Sampling and 
 Filtering. Sampling covers algorithms that 
 build a representative sample of a
 data stream. OrpailleCC implements the reservoir
