@@ -7,6 +7,7 @@ CPPOBJECT=$(TEST_DIR)/test_bloom.oo\
 		  $(TEST_DIR)/test_reservoir_sampling.oo\
 		  $(TEST_DIR)/test_chained_reservoir.oo\
 		  $(TEST_DIR)/test_ltc.oo\
+		  $(TEST_DIR)/test_naive_bayes.oo\
 		  $(TEST_DIR)/test_mc_nn.oo 
 
 FLAG_GCOV=-fprofile-arcs -ftest-coverage
