@@ -54,7 +54,6 @@ class MondrianForest{
 			child_left = src.child_left;
 			child_right = src.child_right;
 			tau = src.tau;
-			posterior_mean = src.posterior_mean;
 			for(int i = 0; i < label_count; ++i)
 				counters[i] = src.counters[i];
 			for(int i = 0; i < feature_count; ++i){
@@ -376,8 +375,12 @@ class MondrianForest{
 			for(int i = 0; i < label_count; ++i)
 				cout << current_node.counters[i] << " - ";
 			cout << endl;
+
+			//If we reach a leaf, and *posterior_means* will be set to the value for this leaf.
 			if(current_node.is_leaf())
 				break;
+
+			//Otherwise, the child is picked based on the split of the node
 			if(features[current_node.split_dimension] <= current_node.split_value)
 				node_id = current_node.child_left;
 			else
