@@ -1,5 +1,6 @@
 #include <ctime>
 #include <cmath>
+#include <algorithm>
 #include "gtest/gtest.h"
 #include "hoeffding_tree.hpp"
 
