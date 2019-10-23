@@ -54,4 +54,9 @@ class Utils{
 		double const u = func::rand_uniform(); //Sample a random number between [0,1[
 		return func::log(1-u) / (-rate); //turn it into the exponential distribution
 	}
+	//An inline function that compute the minimum between two numbers
+	template<class T>
+	inline static bool min(T const a, T const b){
+		return (a < b ? a : b);
+	}
 };

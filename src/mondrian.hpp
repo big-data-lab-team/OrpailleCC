@@ -1,8 +1,4 @@
 #include "utils.hpp"
-#define MAX_NODE 100
-#define EMPTY_NODE -1
-//A macro that compute the minimum between two numbers
-#define mini(X, Y)  ((X) < (Y) ? (X) : (Y))
 /**
  * MondrianForest class implements the Mondrian Forest classifier.
  * Templates:
@@ -18,6 +14,8 @@
  */
 template<class feature_type, class func, int tree_count, int feature_count, int label_count, int max_size>
 class MondrianForest{
+	//Constant to define empty values at some point in the code
+	static const int EMPTY_NODE = -1;
 	//The node structure
 	struct Node{
 		//The features used for the split
@@ -89,6 +87,8 @@ class MondrianForest{
 			return split_dimension == EMPTY_NODE;
 		}
 	};
+	//The maximum number of nodes
+	static const int MAX_NODE = (max_size - (max_size%sizeof(Node))) / sizeof(Node);
 	//The pool of node to use.
 	Node nodes[MAX_NODE];
 	//The node_id of the roots of each tree
@@ -108,7 +108,7 @@ class MondrianForest{
 				return i;
 		return -1;
 	}
-	/*
+	/**
 	 * Given a node, apply the extend algorithm described in the Mondrian paper.
 	 * @param node_id The index of the node in the array *nodes*.
 	 * @param tree_id The id of the tree the node belongs. This is used to check if the node is the root or not.
@@ -303,7 +303,7 @@ class MondrianForest{
 		//Compute sum_counters and sum_tab, and set tab
 		for(int i = 0; i < label_count; ++i){
 			sum_counters += node.counters[i];
-			tab[i] = mini(node.counters[i], 1);
+			tab[i] = Utils::min(node.counters[i], 1);
 			sum_tab += tab[i];
 		}
 		//For each label with a counter higher than zero, compute the posterior mean. Otherwise it is simply the posterior mean of the parent
@@ -370,8 +370,8 @@ class MondrianForest{
 		}
 		//Update each count
 		for(int i = 0; i < label_count; ++i){
-			int const c_left = mini(1, nodes[node.child_left].counters[i]);
-			int const c_right = mini(1, nodes[node.child_right].counters[i]);
+			int const c_left = Utils::min(1, nodes[node.child_left].counters[i]);
+			int const c_right = Utils::min(1, nodes[node.child_right].counters[i]);
 			node.counters[i] = c_left + c_right;
 		}
 	}
