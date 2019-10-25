@@ -1,13 +1,15 @@
-#include <cmath>
-#include <cassert>
-
 /**
  * A class that implement the reservoir sampling algorithm.
  *
  * The templates element_type indicate what type of element the class should sample, sample_size inidcate the size of the sample and random_function
  * give the class a random function that should uniformly return values between 0 and 1.
+ * - element_type: The type of element to store.
+ * - sample_size: The size of the sample.
+ * - funct: A class that implement function needed for ChainedReservoirSampling.
+ *   	+ random: returns a random number between 0 and 1.
+ *   	+ malloc: a malloc function that allocate memory.
  */
-template<class element_type, unsigned int sample_size, double (*random_function)(), class funct>
+template<class element_type, unsigned int sample_size, class funct>
 class ChainedReservoirSampling{
 	/*
 	 * Internal structure for the node of the linked list.
@@ -122,24 +124,24 @@ class ChainedReservoirSampling{
 			sample[counter].element = e;
 			sample[counter].timestamp = timestamp;
 			sample[counter].next = NULL;
-			next[counter] = counter + 1 + round(random_function() * (sample_size-1));
+			next[counter] = counter + 1 + round(funct::random() * (sample_size-1));
 		}
 		else{
 			double const threshold = (double)sample_size / (double)counter;
-			double const rnd = random_function();
+			double const rnd = funct::random();
 			if(rnd < threshold){
-				int const index = round(random_function() * (sample_size-1));
+				int const index = round(funct::random() * (sample_size-1));
 				sample[index].element = e;
 				sample[index].timestamp = timestamp;
 				clear_chain(sample[index].next); //NOTE we do not free the memory here, but it might be interesting to think about it
-				next[index] = counter + 1 + round(random_function() * (sample_size-1));
+				next[index] = counter + 1 + round(funct::random() * (sample_size-1));
 			}
 		}
 		//check `next`
 		for(int i = 0; i < sample_size; ++i){
 			if(counter == next[i]){
 				push_on_chain(sample[i], e, timestamp);
-				next[i] = counter + 1 + round(random_function() * (sample_size-1));
+				next[i] = counter + 1 + round(funct::random() * (sample_size-1));
 			}
 		}
 		counter += 1;
@@ -180,4 +182,3 @@ class ChainedReservoirSampling{
 		}
 	}
 };
-

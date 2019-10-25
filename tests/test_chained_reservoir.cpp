@@ -6,12 +6,12 @@ struct funct{
 	static void* malloc(unsigned int const size){
 		return std::malloc(size);
 	}
+	static double random(void){
+		return static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
+	}
 };
-double randy_crs(void){
-	return (double)rand() / (double)RAND_MAX;
-}
 TEST(ChainedReservoirSampling, Add) { 
-	ChainedReservoirSampling<int, 100, randy_crs, funct> rs;
+	ChainedReservoirSampling<int, 100, funct> rs;
 	int count[100] = {0};
 	for(int i = 0; i < 100; ++i)
 		rs.add(i, i+1);
@@ -24,7 +24,7 @@ TEST(ChainedReservoirSampling, Add) {
 		EXPECT_EQ (1 , count[i]);
 }
 TEST(ChainedReservoirSampling, Add2) { 
-	ChainedReservoirSampling<int, 100, randy_crs, funct> rs;
+	ChainedReservoirSampling<int, 100, funct> rs;
 	int count[101] = {0};
 	for(int i = 0; i < 101; ++i)
 		rs.add(i, i+1);
@@ -47,7 +47,7 @@ TEST(ChainedReservoirSampling, Add2) {
 	EXPECT_EQ (0, count_other); //Each element was inserted once, so no element should appears more than once or less than zero
 }
 TEST(ChainedReservoirSampling, Distribution) { 
-	ChainedReservoirSampling<int, 100, randy_crs, funct> rs;
+	ChainedReservoirSampling<int, 100, funct> rs;
 	int pre_count[100] = {0};
 	int count[100] = {0};
 	pre_count[50] = 1000;
@@ -70,21 +70,25 @@ TEST(ChainedReservoirSampling, Distribution) {
 			EXPECT_EQ (0 , count[i]);
 }
 TEST(ChainedReservoirSampling, Obsolete) { 
-	ChainedReservoirSampling<int, 100, randy_crs, funct> rs;
-	int count[201] = {0};
-	for(int i = 0; i < 201; ++i)
-		rs.add(i, i+1);
-	rs.obsolete(100); //Desclare timestamps 100 and previous obsolete
+	int const size_count = 201;
+	int const idx_obsolete = 100;
+	int const reservoir_size = 100;
+	ChainedReservoirSampling<int, reservoir_size, funct> rs;
+	int count[size_count] = {0};
+	for(int i = 0; i < size_count; ++i)
+		rs.add(i, i);
+	rs.obsolete(idx_obsolete); //Desclare timestamps *idx_obsolete* and previous obsolete
+
 	int total_count = 0;
-	for(int i = 0; i < 100; ++i){//Loop over the sample
+	for(int i = 0; i < idx_obsolete; ++i){//Loop over the sample
 		int idx = rs[i];
-		if(idx >= 0 && idx < 201){
+		if(idx >= 0 && idx < size_count){
 			count[idx] += 1;
 			total_count += 1;
 		}
 	}
-	EXPECT_EQ(100, total_count);
-	for(int i = 0; i < 100; ++i) //The first 100 elements should be obsolete, thus not appears.
+	EXPECT_EQ(idx_obsolete, total_count);
+	for(int i = 0; i < idx_obsolete; ++i) //The first *idx_obsolete* elements should be obsolete, thus not appears.
 		EXPECT_EQ (0 , count[i]);
 	//We cannot say anything for the other elements
 }
