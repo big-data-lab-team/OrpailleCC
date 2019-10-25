@@ -40,6 +40,45 @@ struct funct_cuckoo{
 double randy(void){
 	return (double)rand() / (double)RAND_MAX;
 }
+class functions{
+	public:
+	static void* malloc(int const size){
+		return std::malloc(size);
+	}
+	static void free(void* p){
+		std::free(p);
+	}
+	static double log(double const x){
+		return std::log(x);
+	}
+	static double log2(double const x){
+		return std::log2(x);
+	}
+	static double exp(double const x){
+		return std::exp(x);
+	}
+	static double sqrt(double const x){
+		return std::sqrt(x);
+	}
+	static bool isnan(double const x){
+		return std::isnan(x);
+	}
+	//TODO: we need a rand_uniform and a log functions (log == ln)
+	static double rand_uniform(void){
+		return static_cast<double>(rand())/static_cast<double>(RAND_MAX);
+	}
+	static double random(void){
+		return (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX));
+	}
+	template<class T>
+	static int round(T const x){
+		return std::round(x);
+	}
+	template<class T>
+	static int floor(T const x){
+		return std::floor(x);
+	}
+};
 
 void test_cuckoo(void) { 
 	cout << "\t=== Cuckoo ===" << endl;
@@ -157,7 +196,7 @@ void test_ltc(void){
 }
 void test_reservoir_sampling(void){
 	cout << "\t=== Reservoir Sampling ===" << endl;
-	ReservoirSampling<int, 100, randy> rs;
+	ReservoirSampling<int, 100, functions> rs;
 	unsigned int sum_pre_count = 0;
 	int pre_count[100] = {0}, count_loop = 1000000;
 	pre_count[20] = 1000;
