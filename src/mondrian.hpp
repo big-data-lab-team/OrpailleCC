@@ -102,7 +102,7 @@ class MondrianForest{
 	/**
 	 *	Return the index of an empty node. 
 	 */
-	int available_node(){
+	int available_node(void) const{
 		for(int i = 0; i < MAX_NODE; ++i)
 			if(nodes[i].available())
 				return i;
@@ -135,11 +135,12 @@ class MondrianForest{
 		}
 		//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
 		double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
+		bool update_box = false;
 		if(E >= 0 && parent_tau + E < node.tau){//Introduce a new parent and a new sibling
 			cout << "=== Introduce new nodes ===" << endl;
 			Utils::turn_array_into_probability(probabilities, feature_count, sum);
 			//sample features with probability proportional to e_lower[i] + e_upper[i]
-			int dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+			int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
 
 			//Select the bound to choose the split from
 			double lower_value, upper_value;
@@ -157,64 +158,79 @@ class MondrianForest{
 			int new_parent, new_sibling;
 			//insert new node above the current one
 			new_parent = available_node();
-			nodes[new_parent].split_dimension = dimension;
-			nodes[new_parent].split_value = split_value;
-			nodes[new_parent].tau = parent_tau + E;
+			if(new_parent >= 0){
+				nodes[new_parent].split_dimension = dimension;
+				nodes[new_parent].split_value = split_value;
+				nodes[new_parent].tau = parent_tau + E;
 
-			//Update the box of the new parent
-			for(int i = 0; i < feature_count; ++i){
-				nodes[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
-				nodes[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
+				//insert new leaf, sibbling of the current one
+				new_sibling = available_node();
+				if(new_sibling >= 0){
+
+					//Update the box of the new parent
+					for(int i = 0; i < feature_count; ++i){
+						nodes[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
+						nodes[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
+					}
+					//NOTE Creates counters for the label of the new parent
+					//for(int i = 0; i < label_count; ++i)
+					//nodes[new_parent].counters[i] = node.counters[i];
+					//nodes[new_parent].counters[label] += 1;
+
+					cout << "Node id used: " << new_parent << ", " << new_sibling << endl;
+					//Creates counters for the label of the new sibling
+					for(int i = 0; i < label_count; ++i)
+						nodes[new_sibling].counters[i] = 0;
+					//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
+
+					//Make the connections between the new nodes
+					nodes[new_parent].parent = node.parent;
+					if(node.parent == EMPTY_NODE && node_id == roots[tree_id])//We introduce a parent to the root
+						roots[tree_id] = new_parent;
+					else{
+						Node& parent = nodes[node.parent];
+						if(parent.child_left == node_id)
+							parent.child_left = new_parent;
+						else
+							parent.child_right = new_parent; 
+					}
+
+
+					node.parent = new_parent;
+
+					nodes[new_sibling].parent = new_parent;
+					if(features[dimension] == upper_value){ //right
+						nodes[new_parent].child_right = new_sibling;
+						nodes[new_parent].child_left = node_id;
+					}
+					else{ //left
+						nodes[new_parent].child_left = new_sibling;
+						nodes[new_parent].child_right = node_id;
+					}
+
+					sample_block(new_sibling, features, label);
+
+					cout << "-Node " << new_parent << endl;
+					nodes[new_parent].print();
+					cout << "-Node " << new_sibling << endl;
+					nodes[new_sibling].print();
+					cout << "-Node " << node_id << endl;
+					nodes[node_id].print();
+					cout << "-Root tree " << tree_id << ": " << roots[tree_id] << endl;
+				}
+				else{
+					update_box = true;
+				}
 			}
-			//NOTE Creates counters for the label of the new parent
-			//for(int i = 0; i < label_count; ++i)
-				//nodes[new_parent].counters[i] = node.counters[i];
-			//nodes[new_parent].counters[label] += 1;
-
-			//insert new leaf, sibbling of the current one
-			new_sibling = available_node();
-			cout << "Node id used: " << new_parent << ", " << new_sibling << endl;
-			//Creates counters for the label of the new sibling
-			for(int i = 0; i < label_count; ++i)
-				nodes[new_sibling].counters[i] = 0;
-			//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
-
-			//Make the connections between the new nodes
-			nodes[new_parent].parent = node.parent;
-			if(node.parent == EMPTY_NODE && node_id == roots[tree_id])//We introduce a parent to the root
-				roots[tree_id] = new_parent;
 			else{
-				Node& parent = nodes[node.parent];
-				if(parent.child_left == node_id)
-					parent.child_left = new_parent;
-				else
-					parent.child_right = new_parent; 
+				update_box = true;
 			}
-
-
-			node.parent = new_parent;
-
-			nodes[new_sibling].parent = new_parent;
-			if(features[dimension] == upper_value){ //right
-				nodes[new_parent].child_right = new_sibling;
-				nodes[new_parent].child_left = node_id;
-			}
-			else{ //left
-				nodes[new_parent].child_left = new_sibling;
-				nodes[new_parent].child_right = node_id;
-			}
-
-			sample_block(new_sibling, features, label);
-
-			cout << "-Node " << new_parent << endl;
-			nodes[new_parent].print();
-			cout << "-Node " << new_sibling << endl;
-			nodes[new_sibling].print();
-			cout << "-Node " << node_id << endl;
-			nodes[node_id].print();
-			cout << "-Root tree " << tree_id << ": " << roots[tree_id] << endl;
 		}
-		else{ //Otherwise, just update the box
+		else{
+			update_box = true;
+		}
+
+		if(update_box){ //Otherwise, just update the box
 			cout << "=== Update node ===" << endl;
 			//update lower bound and upper bound of this node
 			for(int i = 0; i < feature_count; ++i){
@@ -266,7 +282,6 @@ class MondrianForest{
 	 * @param tree_id The id of the tree which is an index between 0 and tree_count.
 	 */
 	bool train_tree(feature_type const* features, int const label, int const tree_id){
-		cout << ">>>> new training" << endl;
 		int root_id = roots[tree_id];
 		if (root_id == EMPTY_NODE){ //The root of the tree does not exist yet
 			//Pick a new node
