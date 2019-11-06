@@ -47,17 +47,6 @@ TEST(ReservoirSampling, random) { //Test the random function to make sure it wor
 	test_random_function<53>(epsilon, delta);
 }
 TEST(ReservoirSampling, Add) { 
-	ReservoirSampling<int, 100, functions> rs;
-	int count[100] = {0};
-	for(int i = 0; i < 100; ++i)
-		rs.add(i);
-	for(int i = 0; i < 100; ++i){
-		int idx = rs[i];
-		if(idx >= 0 && idx < 100)
-			count[idx] += 1;
-	}
-	for(int i = 0; i < 100; ++i)
-		EXPECT_EQ (1 , count[i]);
 }
 TEST(ReservoirSampling, Distribution) { 
 	ReservoirSampling<int, 100, functions> rs;
@@ -103,6 +92,15 @@ void test_reservoir_sampling_statistics(double const epsilon, double const delta
 		double const expected_probability = static_cast<double>(reservoir_size) / static_cast<double>(size_count);
 		double const observed_probability = count[i] /static_cast<double>(iteration);
 		EXPECT_NEAR(observed_probability, expected_probability, epsilon);
+	}
+}
+TEST(ReservoirSampling, Add_return) { 
+	ReservoirSampling<int, 100, functions> rs;
+	int count[100] = {0};
+	for(int i = 0; i < 100000; ++i){
+		int const idx = rs.add(i);
+		if(idx >= 0)
+			EXPECT_EQ (i , rs[idx]);
 	}
 }
 TEST(ReservoirSampling, statistics) { 
