@@ -47,6 +47,17 @@ TEST(ReservoirSampling, random) { //Test the random function to make sure it wor
 	test_random_function<53>(epsilon, delta);
 }
 TEST(ReservoirSampling, Add) { 
+	ReservoirSampling<int, 100, functions> rs;
+	int count[100] = {0};
+	for(int i = 0; i < 100; ++i)
+		rs.add(i);
+	for(int i = 0; i < 100; ++i){
+		int idx = rs[i];
+		if(idx >= 0 && idx < 100)
+			count[idx] += 1;
+	}
+	for(int i = 0; i < 100; ++i)
+		EXPECT_EQ (1 , count[i]);
 }
 TEST(ReservoirSampling, Distribution) { 
 	ReservoirSampling<int, 100, functions> rs;
@@ -117,4 +128,32 @@ TEST(ReservoirSampling, statistics) {
 	test_reservoir_sampling_statistics<7, 103>(epsilon, delta);
 	test_reservoir_sampling_statistics<47, 147>(epsilon, delta);
 }
+//TEST(ExponentialReservoirSampling, statistics) { 
+	//int const reservoir_size = 10;
+	//double const lambda = 0.1;
+
+	////Allowable error (epsilon): 0.0O1
+	////Probability of error (delta) : 0.0001
+	////Range value (R): 1.0
+	////iteration = R²ln(1/d) / (2e²) -> 4605171
+	//double const epsilon = 0.01;
+	//double const delta = 0.0001;
+	//int const iteration = std::log(1/delta) / (2 * epsilon * epsilon) + 40000; //+40000 for safety :)
+
+	//double count[50] = {0};
+	//for(int j = 0; j < iteration; ++j){
+		//ExponentialReservoirSampling<int, reservoir_size, functions> ers;
+		//for(int i = 0; i < 50; ++i)
+			//ers.add(i);
+
+		//for(int i = 0; i < ers.count(); ++i){
+			//count[ers[i]] += 1;
+		//}
+	//}
+	//for(int i = 0; i < 50; ++i){
+		//double const expected_probability = std::exp(-lambda * (50-(i+1)));
+		//double const observed_probability = count[i] /static_cast<double>(iteration);
+		//EXPECT_NEAR(observed_probability, expected_probability, epsilon);
+	//}
+//}
 }
