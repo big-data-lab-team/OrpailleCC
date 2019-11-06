@@ -41,11 +41,14 @@ class ReservoirSampling : public Reservoir<element_type, sample_size>{
 	public:
 	/**
 	 * Sample one new element into the sample. This new element may not be added.
+	 * Return the index of the new element. -1 otherwise.
 	 * @param e The new element to eventualy add to the sample.
 	 */
-	void add(element_type e){
+	int add(element_type e){
+		int ret = -1;
 		if(counter < sample_size){
 			this->sample[counter] = e;
+			ret = counter;
 		}
 		else{
 			//We use counter+1 because the current item is not counted in counter yet
@@ -54,9 +57,11 @@ class ReservoirSampling : public Reservoir<element_type, sample_size>{
 			if(rnd < threshold){
 				int const index = func::floor(func::random() * static_cast<double>(sample_size));
 				this->sample[index] = e;
+				ret = index;
 			}
 		}
 		counter += 1;
+		return ret;
 	}
 };
 
@@ -76,9 +81,10 @@ class ExponentialReservoirSampling : public Reservoir<element_type, sample_size>
 	public:
 	/**
 	 * Sample one new element into the sample.
+	 * Return the index of the new element. 
 	 * @param e The new element to add to the sample.
 	 */
-	void add(element_type e){
+	int add(element_type e){
 		double const filling_ratio = static_cast<double>(counter)/static_cast<double>(sample_size);
 		double const remove_element = func::random();
 		int index;
@@ -92,6 +98,7 @@ class ExponentialReservoirSampling : public Reservoir<element_type, sample_size>
 			counter += 1;
 		}
 		this->sample[index] = e;
+		return index;
 	}
 	/**
 	 * Return the number of item already in the Reservoir.
