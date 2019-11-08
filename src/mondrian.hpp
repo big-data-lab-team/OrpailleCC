@@ -60,6 +60,7 @@ class MondrianForest{
 				bound_upper[i] = src.bound_upper[i];
 			}
 		}
+		#ifdef DEBUG
 		void print(bool all = false) const{
 			cout << "Split dim: " << split_dimension << "\tSplit val: " << split_value << endl;
 			cout << "Parent: " << parent << "\tChild: " << child_left << ", " << child_right << endl;
@@ -74,6 +75,7 @@ class MondrianForest{
 					cout << "[" << bound_lower[i] << ", " << bound_upper[i] << "]" << endl;
 			}
 		}
+		#endif
 		/**
 		 * Return true if the node is available. Return false if the node is used by one of the trees.
 		 */
@@ -85,6 +87,9 @@ class MondrianForest{
 		 */
 		bool is_leaf(void) const{
 			return split_dimension == EMPTY_NODE;
+		}
+		double compute_branching_probability(feature_type const* features) const{
+			return -1;
 		}
 	};
 	//The maximum number of nodes
@@ -116,8 +121,6 @@ class MondrianForest{
 	 * @param label The label of the new data  point.
 	 */
 	void extend_block(int const node_id, int const tree_id, feature_type const* features, int const label){
-		cout << "**** Extend block " << node_id << " ****" << endl;
-		nodes[node_id].print();
 		//e_lower and e_upper are used to compute probabilities
 		feature_type e_lower[feature_count], e_upper[feature_count];
 		double probabilities[feature_count];
@@ -137,7 +140,6 @@ class MondrianForest{
 		double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
 		bool update_box = false;
 		if(E >= 0 && parent_tau + E < node.tau){//Introduce a new parent and a new sibling
-			cout << "=== Introduce new nodes ===" << endl;
 			Utils::turn_array_into_probability(probabilities, feature_count, sum);
 			//sample features with probability proportional to e_lower[i] + e_upper[i]
 			int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
@@ -177,7 +179,6 @@ class MondrianForest{
 					//nodes[new_parent].counters[i] = node.counters[i];
 					//nodes[new_parent].counters[label] += 1;
 
-					cout << "Node id used: " << new_parent << ", " << new_sibling << endl;
 					//Creates counters for the label of the new sibling
 					for(int i = 0; i < label_count; ++i)
 						nodes[new_sibling].counters[i] = 0;
@@ -209,14 +210,6 @@ class MondrianForest{
 					}
 
 					sample_block(new_sibling, features, label);
-
-					cout << "-Node " << new_parent << endl;
-					nodes[new_parent].print();
-					cout << "-Node " << new_sibling << endl;
-					nodes[new_sibling].print();
-					cout << "-Node " << node_id << endl;
-					nodes[node_id].print();
-					cout << "-Root tree " << tree_id << ": " << roots[tree_id] << endl;
 				}
 				else{
 					update_box = true;
@@ -231,7 +224,6 @@ class MondrianForest{
 		}
 
 		if(update_box){ //Otherwise, just update the box
-			cout << "=== Update node ===" << endl;
 			//update lower bound and upper bound of this node
 			for(int i = 0; i < feature_count; ++i){
 				if(node.bound_lower[i] > features[i])
@@ -261,7 +253,6 @@ class MondrianForest{
 	 * @param label The label of the new data  point.
 	 */
 	void sample_block(int const node_id, feature_type const* features, int const label){
-		cout << "**** Sample block " << node_id << " ****" << endl;
 		Node& node = nodes[node_id];	
 		//Set the box of the node node_id
 		for(int i = 0; i < feature_count; ++i){
@@ -342,23 +333,54 @@ class MondrianForest{
 		int node_id = roots[tree_id];
 		for(int i = 0; i < label_count; ++i)
 			posterior_means[i] = base_measure;
+
+		double pp_sum = 0, pp_mul = 1;
+		double probability_of_branching;
+		double probability_not_separated_yet = 1;
+		double parent_tau = 0;
+
+		double smoothed_posterior_means[label_count] = {0};
+
 		//Find the corresponding leaf for the data point
-		while(true) {
+		while(node_id != EMPTY_NODE) {
 			Node const& current_node = nodes[node_id];
 			
-			
+			double const delta_tau = current_node.tau - parent_tau;
+			double eta = 0;
+			for(int i = 0; i < feature_count; ++i)
+				eta += Utils::max(features[i] - current_node.bound_upper[i], 0.0) + Utils::max(current_node.bound_lower[i] - features[i], 0.0);
+
+			probability_of_branching = 1 - func::exp(-delta_tau * eta);
+
+			if(probability_of_branching > 0){
+				double const new_node_discount = (eta / (eta + discount_factor)) *
+												-Utils::expm1<func>(-(eta + discount_factor) * delta_tau) / -Utils::expm1<func>(-(eta * delta_tau));
+				double c[label_count];
+				double c_sum = 0;
+				//We need the sum of *c*, so we need two loops
+				for(int l = 0; l < label_count; ++l){
+					c[l] = Utils::min(current_node.counters[l], 1);
+					c_sum += c[l];
+				}
+
+				for(int l = 0; l < label_count; ++l){
+					//posterior_means of the parent of current_node
+					double const posterior_mean = (1/c_sum) * (c[l] - new_node_discount * c[l] + c_sum * posterior_means[l]); 
+					//Note that *posterior_mean* is the value for the hypothetical parent
+					smoothed_posterior_means[l] += probability_not_separated_yet * probability_of_branching * posterior_mean;
+				}
+			}
+
+			//NOTE: *posterior_means* cannot be update before we need the parent value above
 			compute_posterior_mean(current_node, posterior_means);
-			cout << "----- Node " << node_id << endl;
-			for(int i = 0; i < label_count; ++i)
-				cout << posterior_means[i] << " - ";
-			cout << endl;
-			for(int i = 0; i < label_count; ++i)
-				cout << current_node.counters[i] << " - ";
-			cout << endl;
 
 			//If we reach a leaf, and *posterior_means* will be set to the value for this leaf.
-			if(current_node.is_leaf())
+			if(current_node.is_leaf()){
+				for(int l = 0; l < label_count; ++l)
+					posterior_means[l] = smoothed_posterior_means[l] + probability_not_separated_yet * (1 - probability_of_branching) * posterior_means[l];
 				break;
+			}
+			probability_not_separated_yet *= (1 - probability_of_branching);
 
 			//Otherwise, the child is picked based on the split of the node
 			if(features[current_node.split_dimension] <= current_node.split_value)
@@ -396,7 +418,8 @@ class MondrianForest{
 	void update_posterior_count(void){
 		//For each tree, run the recursive *update_posterior_count* on the root
 		for(int i = 0; i < tree_count; ++i)
-			update_posterior_count(roots[i]);
+			if(roots[i] != EMPTY_NODE)
+				update_posterior_count(roots[i]);
 	}
 	public:
 	/**
@@ -422,7 +445,7 @@ class MondrianForest{
 	bool train(feature_type const* features, int const label){
 		bool fully_trained;
 		for(int i = 0; i < tree_count; ++i){
-			bool has_trained = train_tree(features, label, 0);
+			bool has_trained = train_tree(features, label, i);
 			if(!has_trained)
 				fully_trained = false;
 		}
