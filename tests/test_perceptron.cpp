@@ -40,5 +40,21 @@ TEST(MultilayerPerceptron, propagating2) {
 
 	EXPECT_NEAR(output[0], expected[0], 0.0001);
 }
+TEST(MultilayerPerceptron, backpropagate) {
+	int layer_size[3] = {2, 2, 1};
+	double initial_weights[9] = {1,1,1,1,1,1,1,1,1}; //There is 9 because of the bias neuron at each layer
+	double weights[6] = {0.5, 0.5, 0.1, 0.25, 0.25, 0.1};
+	double input[2] = {1.5, 3}, output[2] = {0}, expected[1] = {2.849713370};
+	double real_output[1] = {4.0};
+	MultiLayerPerceptron<3, 60000, functions> mlp(layer_size);
+	mlp.set_weights(initial_weights);
+	mlp.set_weights(1, 0, weights);
+	mlp.set_weights(1, 1, weights+3);
+	mlp.feed_forward(input, output);
+	mlp.backpropagate(real_output);
+	mlp.feed_forward(input, output);
+
+	EXPECT_NEAR(output[0], expected[0], 0.0001);
+}
 }
 
