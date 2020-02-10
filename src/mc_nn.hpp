@@ -14,6 +14,7 @@ using namespace std;
  */
 template<class feature_type, unsigned int feature_count, unsigned int max_cluster=25,unsigned int error_threshold=2, int performance_thr=50, int empty_class=-1>
 class MCNN{
+
 	//Define an internal definition of a micro-cluster
 	struct cluster{
 		feature_type features_square_sum[feature_count];//CF2X
@@ -24,6 +25,11 @@ class MCNN{
 		int label;
 		int error_count;
 		double initial_timestamp;
+		//The triangular function
+		template<class type>
+		double triangular_number(type t) const{
+			return ((t*t + t) * 0.5);
+		}
 		/*
 		 * Compute the variance for one feature.
 		 * @param features_idx the index of the feature.
@@ -53,8 +59,8 @@ class MCNN{
 		 * @param timestamp the current timestamp.
 		 */
 		double performance(double const current_timestamp) const{
-			double const current_tn = triangular_number(current_timestamp);
-			double const initial_tn = triangular_number(initial_timestamp);
+			const double current_tn = triangular_number(current_timestamp);
+			const double initial_tn = triangular_number(initial_timestamp);
 			double const real_tn = current_tn - initial_tn;
 			double const participation = timestamp_sum * (100 / real_tn);
 			return participation;
@@ -114,12 +120,23 @@ class MCNN{
 	int count_active_cluster = 0;
 	double timestamp = 0;
 
-	//The triangular function
-	template<class type>
-	double triangular_number(type t) const{
-		return ((t*t + t) * 0.5);
-	}
 
+	/** Returns the micro-cluster with the lowest participation
+	 */
+	int get_lowest_participation(void){
+		int lowest = -1;
+		double lowest_value = 101;
+		for(int i = 0; i < max_cluster; ++i){
+			if(active[i] == true){
+				double perf = clusters[i].performance(timestamp);
+				if(lowest == -1 || perf < lowest_value){
+					lowest_value = perf;
+					lowest = i;
+				}
+			}
+		}
+		return lowest;
+	}
 	/*
 	 * Function to split a cluster
 	 * @param cluster_idx the index of the cluster to split.
@@ -133,8 +150,9 @@ class MCNN{
 			}
 		}
 		if(new_idx < 0){
-			//TODO what to do when there is no more space :]
+			//TODO make sure we don't reuse cluster_idx
 			//Remove the least performant cluster.
+			new_idx = get_lowest_participation();
 		}
 
 		//Choose the attribute with the greatest variance, then do the split on it
@@ -276,8 +294,11 @@ class MCNN{
 				}
 			}
 			//If we are here, there was already `max_cluster` clusters active.
+			int new_idx = get_lowest_participation();
+			int la = clusters[new_idx].label;
+			clusters[new_idx].initialize(features, label, timestamp);
 			//TODO don't know what to do :]
-			return false;
+			return true;
 		}
 		//Get the cluster
 		cluster& nearest = clusters[nearest_index];
