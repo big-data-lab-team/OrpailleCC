@@ -31,7 +31,7 @@ class Reservoir{
  * - sample_size: the size of the reservoir.
  * - func: a class type that contains all needed function for the Reservoir Sampling.
  *   	+ random function: A function that returns a random number between 0 and 1.
- *   	+ floo function: A function that floor a floating point number.
+ *   	+ floor function: A function that floor a floating point number.
  */
 template<class element_type, unsigned int sample_size, class func>
 class ReservoirSampling : public Reservoir<element_type, sample_size>{
@@ -44,24 +44,31 @@ class ReservoirSampling : public Reservoir<element_type, sample_size>{
 	 * Return the index of the new element. -1 otherwise.
 	 * @param e The new element to eventualy add to the sample.
 	 */
-	int add(element_type e){
-		int ret = -1;
+	inline int add(element_type e){
+		int const idx = add();
+		if(idx >= 0){
+			this->sample[idx] = e;
+		}
+		return idx;
+	}
+	/**
+	 * Sample one new element into the sample. This new element will have to be added by the user.
+	 * Return the index of the new element. -1 otherwise.
+	 */
+	int add(void){
+		int idx = -1;
 		if(counter < sample_size){
-			this->sample[counter] = e;
-			ret = counter;
+			idx = counter;
 		}
 		else{
 			//We use counter+1 because the current item is not counted in counter yet
 			double const threshold = static_cast<double>(sample_size) / static_cast<double>(counter+1);
 			double const rnd = func::random();
-			if(rnd < threshold){
-				int const index = func::floor(func::random() * static_cast<double>(sample_size));
-				this->sample[index] = e;
-				ret = index;
-			}
+			if(rnd < threshold)
+				idx = func::floor(func::random() * static_cast<double>(sample_size));
 		}
 		counter += 1;
-		return ret;
+		return idx;
 	}
 	/**
 	 * Return the number of item already in the Reservoir.
@@ -90,7 +97,18 @@ class ExponentialReservoirSampling : public Reservoir<element_type, sample_size>
 	 * Return the index of the new element. 
 	 * @param e The new element to add to the sample.
 	 */
-	int add(element_type e){
+	inline int add(element_type e){
+		int const idx = add();
+		if(idx >= 0){
+			this->sample[idx] = e;
+		}
+		return idx;
+	}
+	/**
+	 * Sample one new element into the sample. This new element will have to be added by the user.
+	 * Return the index of the new element. -1 otherwise.
+	 */
+	int add(void){
 		double const filling_ratio = static_cast<double>(counter)/static_cast<double>(sample_size);
 		double const remove_element = func::random();
 		int index;
@@ -103,7 +121,6 @@ class ExponentialReservoirSampling : public Reservoir<element_type, sample_size>
 			index = counter;
 			counter += 1;
 		}
-		this->sample[index] = e;
 		return index;
 	}
 	/**
