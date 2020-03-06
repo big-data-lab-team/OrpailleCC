@@ -8,11 +8,9 @@ using namespace std;
  * - feature_type: the type of the features. They must have all the same type.
  * - feature_count: The number of feature per data point.
  * - max_cluster: The maximum number of cluster to use (default: 25).
- * - error_threshold: The number of misclassification before the cluster is split.
- * - performance_thr: the threshold to remove old cluster. (not used yet).
  * - empty_class: the value of an empty class.
  */
-template<class feature_type, unsigned int feature_count, unsigned int max_cluster=25,unsigned int error_threshold=2, int performance_thr=50, int empty_class=-1>
+template<class feature_type, unsigned int feature_count, unsigned int max_cluster=25, int empty_class=-1>
 class MCNN{
 
 	//Define an internal definition of a micro-cluster
@@ -30,7 +28,7 @@ class MCNN{
 		double triangular_number(type t) const{
 			return ((t*t + t) * 0.5);
 		}
-		/*
+		/**
 		 * Compute the variance for one feature.
 		 * @param features_idx the index of the feature.
 		 */
@@ -40,7 +38,7 @@ class MCNN{
 			double const ret=a - b*b;
 			return ret;
 		}
-		/*
+		/**
 		 * Incorporate a data point into the micro-cluster.
 		 * @param feature the data point.
 		 * @param timestamp the timestamp at which the data point has been added.
@@ -54,36 +52,37 @@ class MCNN{
 				features_square_sum[i] += features[i]*features[i];
 			}
 		}
-		/*
+		/**
 		 * Compute the performance (or the participation) of the micro-cluster at a specific timestamp.
 		 * @param timestamp the current timestamp.
 		 */
 		double performance(double const current_timestamp) const{
-			const double current_tn = triangular_number(current_timestamp);
-			const double initial_tn = triangular_number(initial_timestamp);
+			double const current_tn = triangular_number(current_timestamp);
+			double const initial_tn = triangular_number(initial_timestamp);
 			double const real_tn = current_tn - initial_tn;
 			double const participation = timestamp_sum * (100 / real_tn);
 			return participation;
 		}
-		/*
+		/**
 		 * Initialize a cluster.
 		 * @param features the first data point added to the cluster.
 		 * @param label the label of the cluster. (note, the label won't change for this cluster.)
 		 * @param timestamp the timestamp of the cluster.
+		 * @param starting_error The error count the cluster starts with. When the error count of the cluster reach zero, the cluster is split.
 		 */
-		void initialize(feature_type const* features, int const label, double const timestamp){
+		void initialize(feature_type const* features, int const label, double const timestamp, int const starting_error){
 			initial_timestamp = timestamp;
 			timestamp_sum = timestamp;
 			timestamp_square_sum = timestamp * timestamp;
 			data_count = 1;
-			error_count = error_threshold; //The error count start at the threshold (contrary to what is says in the paper)
+			error_count = starting_error; //The error count start at the threshold (contrary to what is says in the paper)
 			this->label = label;
 			for(int i = 0; i < feature_count; ++i){
 				features_sum[i] = features[i];
 				features_square_sum[i] = features[i]*features[i];
 			}
 		}
-		/*
+		/**
 		 * Compute the data point corresponding to the center of the micro-cluster.
 		 * @param features the data point of the cluster (output).
 		 */
@@ -92,7 +91,7 @@ class MCNN{
 				features[i] = (double)features_sum[i] / (double)data_count;
 			}
 		}
-		/*
+		/**
 		 * Overload of the = operator.
 		 */
 		cluster& operator=(const cluster& other){
@@ -118,17 +117,22 @@ class MCNN{
 	bool active[max_cluster] = {false};
 	//Count the number of cluster active
 	int count_active_cluster = 0;
-	double timestamp = 0;
+	double timestamp = -1;
+	unsigned int error_thr;
+	double performance_thr;
+	unsigned int cleaning_method;
 
 
-	/** Returns the micro-cluster with the lowest participation
+
+	/**
+	 * Returns the micro-cluster with the lowest participation
 	 */
 	int get_lowest_participation(void){
 		int lowest = -1;
 		double lowest_value = 101;
 		for(int i = 0; i < max_cluster; ++i){
 			if(active[i] == true){
-				double perf = clusters[i].performance(timestamp);
+				double const perf = clusters[i].performance(timestamp);
 				if(lowest == -1 || perf < lowest_value){
 					lowest_value = perf;
 					lowest = i;
@@ -137,7 +141,7 @@ class MCNN{
 		}
 		return lowest;
 	}
-	/*
+	/**
 	 * Function to split a cluster
 	 * @param cluster_idx the index of the cluster to split.
 	 */
@@ -150,9 +154,11 @@ class MCNN{
 			}
 		}
 		if(new_idx < 0){
-			//TODO make sure we don't reuse cluster_idx
 			//Remove the least performant cluster.
-			new_idx = get_lowest_participation();
+			if(cleaning_method == 0 || cleaning_method == 2)
+				new_idx = get_lowest_participation();
+			else //There is no more space and the cleaning method does not allow us to remove a cluster here
+				return;
 		}
 
 		//Choose the attribute with the greatest variance, then do the split on it
@@ -179,12 +185,12 @@ class MCNN{
 		//TODO: round somehow
 		int old_time = (clusters[cluster_idx].timestamp_sum / clusters[cluster_idx].data_count);
 
-		clusters[new_idx].initialize(cluster_minus, clusters[cluster_idx].label, old_time);
-		clusters[cluster_idx].initialize(cluster_plus, clusters[cluster_idx].label, old_time);
+		clusters[new_idx].initialize(cluster_minus, clusters[cluster_idx].label, old_time, error_thr);
+		clusters[cluster_idx].initialize(cluster_plus, clusters[cluster_idx].label, old_time, error_thr);
 		active[new_idx] = true;
 		count_active_cluster += 1;
 	}
-	/*
+	/**
 	 * Compute the squared distance between two data point.
 	 * @param e1 data point 1.
 	 * @param e2 data point 2.
@@ -196,7 +202,7 @@ class MCNN{
 		//NOTE: Not really a distance :D
 		return squared_sum;
 	}
-	/*
+	/**
 	 * Find the nearest cluster as well as the nearest cluster with the same class given a data point.
 	 * @param features the data point features.
 	 * @param label the label (or class) of the data point.
@@ -234,7 +240,7 @@ class MCNN{
 		if(shortest_distance == distance_nearest)
 			nearest = nearest_with_class;
 	}
-	/*
+	/**
 	 * Find the nearest cluster given a data point.
 	 * @param features the data point features.
 	 * @param nearest the nearest cluster of the data point (output).
@@ -263,15 +269,34 @@ class MCNN{
 		if(shortest != nullptr)
 			*shortest = shortest_distance;
 	}
-	/*
+	/**
 	 * The sqrt implementation if needed.
 	 * @param val the number to compute the square root.
 	 */
 	double sqrt_local(double const val) const{
 		return sqrt(val); //TODO: to change
 	}
+	/**
+	 * Remove the clusters with a participation lower than the performance threshold.
+	 */
+	void clean_low_performance_clusters(void){
+		for(int i = 0; i < max_cluster; ++i)
+			if(active[i] == true && clusters[i].performance(timestamp) < performance_thr)
+				active[i] = false;
+	}
 	public:
-	/*
+	/**
+	 * Constructor
+	 * @param error_thr Set the error threshold. The higher it is, the longer the a cluster will take to split.
+	 * @param cleaning_method Define the method used to remove the cluster. 0: when there is no more inactive cluster and a new cluster is needed, the cluster with the lowest performance is removed. 1: at every training, removes the clusters with a participation lower than the performance threshold. 2: use both method.
+	 * @param performance_thr Set the performance threshold. The threshold after which a cluster is removed.
+	 */
+	MCNN(unsigned int const error_thr=2, unsigned int const cleaning_method=0, double const performance_thr=50){
+		this->error_thr = error_thr;
+		this->performance_thr = performance_thr;
+		this->cleaning_method = cleaning_method;
+	}
+	/**
 	 * Train the model with a new data point.
 	 * @param features An array of features.
 	 * @param label The class for this data point.
@@ -279,6 +304,10 @@ class MCNN{
 	 */
 	bool train(feature_type const* features, int const label){
 		assert(features != NULL);
+		if(cleaning_method == 1 || cleaning_method == 2)
+			clean_low_performance_clusters();
+
+		timestamp += 1;
 		//Find the nearest neighbor
 		//Find the nearest neighbor with the same class
 		int nearest_index = -1, nearest_with_class_index = -1;
@@ -289,16 +318,19 @@ class MCNN{
 				if(active[i] == false){
 					active[i] = true;
 					count_active_cluster += 1;
-					clusters[i].initialize(features, label, timestamp);
+					clusters[i].initialize(features, label, timestamp, error_thr);
 					return true;
 				}
 			}
 			//If we are here, there was already `max_cluster` clusters active.
-			int new_idx = get_lowest_participation();
-			int la = clusters[new_idx].label;
-			clusters[new_idx].initialize(features, label, timestamp);
-			//TODO don't know what to do :]
-			return true;
+			if(cleaning_method == 0 || cleaning_method == 2){ //Cleaning method
+				int new_idx = get_lowest_participation();
+				int la = clusters[new_idx].label;
+				clusters[new_idx].initialize(features, label, timestamp, error_thr);
+				return true;
+			}
+			//If no cleaning has been done, then this data point is not included
+			return false;
 		}
 		//Get the cluster
 		cluster& nearest = clusters[nearest_index];
@@ -316,7 +348,7 @@ class MCNN{
 			nearest.error_count -= 1;
 			nearest_with_class.error_count -= 1;
 			nearest_with_class.incorporate(features, timestamp);
-			//If one of them reach error_threshold, the cluster is split
+			//If one of them reach error_thr, the cluster is split
 			if(nearest_with_class.error_count <= 0){
 				split(nearest_with_class_index);
 			}
@@ -346,5 +378,19 @@ class MCNN{
 	 */
 	int count_clusters(void) const{
 		return count_active_cluster;
+	}
+	/**
+	 * Getter that return the error threshold.
+	 * @return The error threshold.
+	 */
+	unsigned int get_error_thr(void) const{
+		return error_thr;
+	}
+	/**
+	 * Getter that return the performance threshold.
+	 * @return The performance threshold.
+	 */
+	unsigned int get_performance_thr(void) const{
+		return performance_thr;
 	}
 };
