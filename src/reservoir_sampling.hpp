@@ -44,8 +44,8 @@ class ReservoirSampling : public Reservoir<element_type, sample_size>{
 	 * Return the index of the new element. -1 otherwise.
 	 * @param e The new element to eventualy add to the sample.
 	 */
-	inline int add(element_type e){
-		int const idx = add();
+	inline int add(element_type const& e){
+		int const idx = sample_index();
 		if(idx >= 0){
 			this->sample[idx] = e;
 		}
@@ -55,8 +55,9 @@ class ReservoirSampling : public Reservoir<element_type, sample_size>{
 	 * Sample one new element into the sample. This new element will have to be added by the user.
 	 * Return the index of the new element. -1 otherwise.
 	 */
-	int add(void){
+	int sample_index(void){
 		int idx = -1;
+		//If the sample is not full yet, just use the last index.
 		if(counter < sample_size){
 			idx = counter;
 		}
@@ -98,7 +99,7 @@ class ExponentialReservoirSampling : public Reservoir<element_type, sample_size>
 	 * @param e The new element to add to the sample.
 	 */
 	inline int add(element_type e){
-		int const idx = add();
+		int const idx = sample_index();
 		if(idx >= 0){
 			this->sample[idx] = e;
 		}
@@ -108,7 +109,7 @@ class ExponentialReservoirSampling : public Reservoir<element_type, sample_size>
 	 * Sample one new element into the sample. This new element will have to be added by the user.
 	 * Return the index of the new element. -1 otherwise.
 	 */
-	int add(void){
+	int sample_index(void){
 		double const filling_ratio = static_cast<double>(counter)/static_cast<double>(sample_size);
 		double const remove_element = func::random();
 		int index;
