@@ -15,6 +15,9 @@ class functions{
 	static int derivative(T const x){
 		return 1;
 	}
+	static double random(void){
+		return (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX));
+	}
 };
 
 TEST(MultilayerPerceptron, propagating) {
