@@ -12,6 +12,7 @@ template<class feature_type, int label_count, int feature_count, class func>
 class NaiveBayes{
 	class GaussianEstimator{
 		double weight_sum = 0, variance_sum = 0, mean = 0;
+		public:
 		void train(double const value, double const weight){
 			if (weight_sum > 0.0) {
 				weight_sum += weight;
@@ -61,7 +62,7 @@ class NaiveBayes{
 		* @param weight the weight to give to this data point (default: 1.0).
 		*/
 		bool train(feature_type const* features, int const label, double const weight = 1.0){
-			for(int i = 0; ; i < feature_count; ++i)
+			for(int i = 0; i < feature_count; ++i)
 				counters[label * feature_count + i].train(features[i], weight);
 			return true;
 		}
