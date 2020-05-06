@@ -140,32 +140,37 @@ class MultiLayerPerceptron{
 			}
 		}
 		/**
+		 * Return the array of weights.
+		 */
+		double* const get_weights(void){
+			return static_cast<double* const>(static_cast<void*>(weights));
+		}
+		/**
 		 * Run the backpropagation step based on the expected value and the last call to feed_forward.
 		 * @param expected .
 		 */
-		void backpropagate(double const* expected){
+		double backpropagate(double const* expected){
 			int output_base = get_output_base(layer_count-1);
 			int weight_base = get_weight_base(layer_count-1);
 
+			double sum_error_output = 0;
 			//Set the error of the last layer
 			for(int i = 0; i < layer_size[layer_count-1]; ++i){
 				int output_global_index = output_base + i;
 				double output = neuron_output[output_global_index];
 				double err = output - expected[i];
+				sum_error_output += (err*err);
 				neuron_output[output_global_index] = func::derivative(output) * err; 
 			}
 
 			for(int layer_idx = layer_count - 2; layer_idx >= 0; --layer_idx){
 				output_base -= layer_size[layer_idx];
 				weight_base -= (layer_size[layer_idx-1]+1) * layer_size[layer_idx];
-				
 				for(int neuron_idx = 0; neuron_idx <= layer_size[layer_idx]; ++neuron_idx){
 					double neuron_error = 0;
 					double current_neuron_output = 1;
 					if(neuron_idx < layer_size[layer_idx])
 						current_neuron_output = neuron_output[output_base + neuron_idx];
-
-					//First loop too get the error related to the neuron
 					for(int weight_idx = 0; weight_idx < layer_size[layer_idx+1]; ++weight_idx){
 
 						int neuron_next_layer = output_base + layer_size[layer_idx] + weight_idx;
@@ -186,6 +191,8 @@ class MultiLayerPerceptron{
 						neuron_output[output_base + neuron_idx] = neuron_error;
 				}
 			}
+
+			return (sum_error_output/layer_size[layer_count-1]);
 		}
 };
 
