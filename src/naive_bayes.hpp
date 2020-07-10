@@ -43,6 +43,8 @@ class NaiveBayes{
 	int sum_feature_size = 0;
 	//The list of estimators for each feature and each label.
 	GaussianEstimator counters[label_count * feature_count];
+	double label_weights[label_count] = {0};
+	double total_weights = 0;
 	//The smoothing value
 	double smoothing;
 
@@ -64,6 +66,8 @@ class NaiveBayes{
 		bool train(feature_type const* features, int const label, double const weight = 1.0){
 			for(int i = 0; i < feature_count; ++i)
 				counters[label * feature_count + i].train(features[i], weight);
+			label_weights[label] += weight;
+			total_weight += weight;
 			return true;
 		}
 		/*
@@ -74,9 +78,11 @@ class NaiveBayes{
 		int predict(feature_type* features, double* scores = nullptr){
 			double local_score[label_count] = {0};	
 			//Accumulate the probability for each label
-			for(int l = 0; l < label_count; ++l)
+			for(int l = 0; l < label_count; ++l){
+				local_score[l] = func::log(label_weights[l] / total_weights);
 				for(int f = 0; f < feature_count; ++f)//Add the log to avoid overflow
 					local_score[l] += func::log(counters[l * feature_count + f].probability_density(features[f]));
+			}
 
 			int max_l = 0;
 			for(int l = 1; l < label_count; ++l){
