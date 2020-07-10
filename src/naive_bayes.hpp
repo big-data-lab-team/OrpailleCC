@@ -67,7 +67,7 @@ class NaiveBayes{
 			for(int i = 0; i < feature_count; ++i)
 				counters[label * feature_count + i].train(features[i], weight);
 			label_weights[label] += weight;
-			total_weight += weight;
+			total_weights += weight;
 			return true;
 		}
 		/*
