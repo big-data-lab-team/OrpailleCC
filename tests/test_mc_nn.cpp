@@ -17,7 +17,6 @@ TEST(MCNN, insert_once) {
 	/*
 	 * In that test case we ensure that when an element is inserted in the classifier it can be predicted well
 	 */
-	MCNN<int, 4> mcnn();
 	srand(time(NULL) - 10);
 	MCNN<int, 4> classifier;
 	int dataset_size = 4;
