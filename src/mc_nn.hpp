@@ -281,7 +281,7 @@ class MCNN{
 	 */
 	void clean_low_performance_clusters(void){
 		for(int i = 0; i < max_cluster; ++i)
-			if(active[i] == true && clusters[i].performance(timestamp) < performance_thr)
+			if(active[i] == true && clusters[i].data_count > 1 && clusters[i].performance(timestamp) < performance_thr)
 				active[i] = false;
 	}
 	public:
