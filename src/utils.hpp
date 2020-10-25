@@ -59,4 +59,12 @@ class Utils{
 	inline static bool min(T const a, T const b){
 		return (a < b ? a : b);
 	}
+	template<class T>
+	inline static bool max(T const a, T const b){
+		return (a > b ? a : b);
+	}
+	template<class func>
+	inline static double expm1(double const a){
+		return func::exp(a) - 1;
+	}
 };
