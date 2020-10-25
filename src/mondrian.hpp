@@ -1,4 +1,5 @@
 #include "utils.hpp"
+
 /**
  * MondrianForest class implements the Mondrian Forest classifier.
  * Templates:
@@ -456,7 +457,7 @@ class MondrianForest{
 	 * Return the most likely label.
 	 * @param features The features of the data point.
 	 */
-	int predict(feature_type const* features){
+	int predict(feature_type const* features, double* scores = nullptr){
 		//Update internal count
 		update_posterior_count();
 
