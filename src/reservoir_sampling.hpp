@@ -74,7 +74,7 @@ class ReservoirSampling : public Reservoir<element_type, sample_size>{
 	/**
 	 * Return the number of item already in the Reservoir.
 	 */
-	inline int count(void) const{
+	inline unsigned int count(void) const{
 		return counter;
 	}
 };
@@ -127,7 +127,7 @@ class ExponentialReservoirSampling : public Reservoir<element_type, sample_size>
 	/**
 	 * Return the number of item already in the Reservoir.
 	 */
-	inline int count(void) const{
+	inline unsigned int count(void) const{
 		return counter;
 	}
 };
