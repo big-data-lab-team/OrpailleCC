@@ -107,7 +107,6 @@ void test_reservoir_sampling_statistics(double const epsilon, double const delta
 }
 TEST(ReservoirSampling, Add_return) { 
 	ReservoirSampling<int, 100, functions> rs;
-	int count[100] = {0};
 	for(int i = 0; i < 100000; ++i){
 		int const idx = rs.add(i);
 		if(idx >= 0)
@@ -128,6 +127,14 @@ TEST(ReservoirSampling, statistics) {
 	test_reservoir_sampling_statistics<7, 103>(epsilon, delta);
 	test_reservoir_sampling_statistics<47, 147>(epsilon, delta);
 }
+//TEST(ExponentialReservoirSampling, Add_return) { 
+	//ExponentialReservoirSampling<int, 100, functions> rs;
+	//for(int i = 0; i < 100000; ++i){
+		//int const idx = rs.add(i);
+		//if(idx >= 0)
+			//EXPECT_EQ (i , rs[idx]);
+	//}
+//}
 //TEST(ExponentialReservoirSampling, statistics) { 
 	//int const reservoir_size = 10;
 	//double const lambda = 0.1;
