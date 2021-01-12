@@ -24,7 +24,8 @@ class CuckooFilter{
 	//Typedef to simplify the use of the hash function given by the user.
 	typedef unsigned char fingerprint_t;
 	unsigned int const element_size = sizeof(element_type);
-	static unsigned int const total_size = ceil((double)bucket_count*bucket_size*entry_size / (double)BYTE_SIZE);
+	static unsigned int const bit_size = bucket_count*bucket_size*entry_size; //Total number of bit required for the bucket.
+	static unsigned int const total_size = (bit_size + (BYTE_SIZE - (bit_size%BYTE_SIZE))) / BYTE_SIZE;
 	unsigned char filter[total_size] = {0};
 
 	/* 
@@ -34,7 +35,7 @@ class CuckooFilter{
 	unsigned char get_bit(unsigned int const bit_index) const{
 		unsigned int const mod = bit_index % BYTE_SIZE;
 		unsigned int const byte_index = (bit_index - mod) / BYTE_SIZE;
-		return (filter[byte_index] & (1 << mod) != 0);
+		return ((filter[byte_index] & (1 << mod)) != 0);
 	}
 	/* 
 	 * Set a bit in the filter.
