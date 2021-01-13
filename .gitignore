@@ -1,0 +1,6 @@
+*.oo
+*.gcda
+*.gcdo
+*.gcno
+main-test
+Gemfile*
