@@ -103,6 +103,7 @@ struct MondrianNode{
 template<class feature_type, class func, class Statistic, int feature_count, int label_count, int max_size>
 class CoarseMondrianForest{
 typedef MondrianNode<feature_count, label_count> Node;
+
 //The node structure
 struct TreeBase{
 	static const int EMPTY_ROOT = -1;
@@ -121,7 +122,8 @@ unsigned char buffer[max_size];
 
 //The number of nodes
 int node_count = 0;
-//Node nodes[MAX_NODE];
+int node_available = 0;
+//The number of trees
 int tree_count = 0;	
 //The lifetime parameter
 double lifetime;
@@ -142,10 +144,20 @@ TreeBase* tree_bases() {
 TreeBase const* tree_bases() const{
 	return reinterpret_cast<TreeBase const*>(buffer + max_size - tree_count * sizeof(TreeBase));
 }
+template<class T>
+int index_max(T* array, int const size) {
+	int best = 0;
+	for(int i = 1; i < size; ++i)
+		if(array[i] > array[best])
+			best = i;
+	return best;
+}
 /**
  *	Return the index of an empty node. 
  */
 int available_node(void) const{
+	if(node_available == 0)
+		return -1;
 	for(int i = 0; i < node_count; ++i)
 		if(nodes()[i].available())
 			return i;
@@ -197,90 +209,76 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 		double const split_value = func::rand_uniform()*(upper_value - lower_value) + lower_value;
 		int new_parent, new_sibling;
 		//insert new node above the current one
-		new_parent = available_node();
-		if(new_parent >= 0){
+		if(node_available >= 2){
+			new_parent = available_node();
 			nodes()[new_parent].split_dimension = dimension;
 			nodes()[new_parent].split_value = split_value;
 			nodes()[new_parent].tau = parent_tau + E;
-
 			//insert new leaf, sibbling of the current one
 			new_sibling = available_node();
-			if(new_sibling >= 0){
+			//Update the box of the new parent
+			for(int i = 0; i < feature_count; ++i){
+				nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
+				nodes()[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
+			}
+			//NOTE Creates counters for the label of the new parent
+			//for(int i = 0; i < label_count; ++i)
+			//nodes[new_parent].counters[i] = node.counters[i];
+			//nodes[new_parent].counters[label] += 1;
 
-				//Update the box of the new parent
-				for(int i = 0; i < feature_count; ++i){
-					nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
-					nodes()[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
-				}
-				//NOTE Creates counters for the label of the new parent
-				//for(int i = 0; i < label_count; ++i)
-				//nodes[new_parent].counters[i] = node.counters[i];
-				//nodes[new_parent].counters[label] += 1;
+			//Creates counters for the label of the new sibling
+			for(int i = 0; i < label_count; ++i)
+				nodes()[new_sibling].counters[i] = 0;
+			//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
 
-				//Creates counters for the label of the new sibling
-				for(int i = 0; i < label_count; ++i)
-					nodes()[new_sibling].counters[i] = 0;
-				//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
-
-				//Make the connections between the new nodes
-				nodes()[new_parent].parent = node.parent;
-				if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
-					tree_bases()[tree_id].root = new_parent;
-				else{
-					Node& parent = nodes()[node.parent];
-					if(parent.child_left == node_id)
-						parent.child_left = new_parent;
-					else
-						parent.child_right = new_parent; 
-				}
+			//Make the connections between the new nodes
+			nodes()[new_parent].parent = node.parent;
+			if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
+				tree_bases()[tree_id].root = new_parent;
+			else{
+				Node& parent = nodes()[node.parent];
+				if(parent.child_left == node_id)
+					parent.child_left = new_parent;
+				else
+					parent.child_right = new_parent; 
+			}
 
 
-				node.parent = new_parent;
+			node.parent = new_parent;
 
-				nodes()[new_sibling].parent = new_parent;
-				if(features[dimension] == upper_value){ //right
-					nodes()[new_parent].child_right = new_sibling;
-					nodes()[new_parent].child_left = node_id;
-				}
-				else{ //left
-					nodes()[new_parent].child_left = new_sibling;
-					nodes()[new_parent].child_right = node_id;
-				}
+			nodes()[new_sibling].parent = new_parent;
+			if(features[dimension] == upper_value){ //right
+				nodes()[new_parent].child_right = new_sibling;
+				nodes()[new_parent].child_left = node_id;
+			}
+			else{ //left
+				nodes()[new_parent].child_left = new_sibling;
+				nodes()[new_parent].child_right = node_id;
+			}
 
-				sample_block(new_sibling, features, label);
+			sample_block(new_sibling, features, label);
+		}
+		else{ //Otherwise, just update the box
+			//update lower bound and upper bound of this node
+			for(int i = 0; i < feature_count; ++i){
+				if(node.bound_lower[i] > features[i])
+					node.bound_lower[i] = features[i]; 
+				if(node.bound_upper[i] < features[i])
+					node.bound_upper[i] = features[i]; 
+			}
+			//if not leaf, recurse on the node that contains the data point
+			if(!node.is_leaf()){
+				if(features[node.split_dimension] <= node.split_value)
+					extend_block(node.child_left, tree_id, features, label);
+				else if(features[node.split_dimension] > node.split_value)
+					extend_block(node.child_right, tree_id, features, label);
+				//NOTE: we don't update the counters of labels here because the counting will be done when prediction is required.
+				//We can optimize that.
 			}
 			else{
-				update_box = true;
+				//Update the counter of label
+				node.counters[label] += 1;
 			}
-		}
-		else{
-			update_box = true;
-		}
-	}
-	else{
-		update_box = true;
-	}
-
-	if(update_box){ //Otherwise, just update the box
-		//update lower bound and upper bound of this node
-		for(int i = 0; i < feature_count; ++i){
-			if(node.bound_lower[i] > features[i])
-				node.bound_lower[i] = features[i]; 
-			if(node.bound_upper[i] < features[i])
-				node.bound_upper[i] = features[i]; 
-		}
-		//if not leaf, recurse on the node that contains the data point
-		if(!node.is_leaf()){
-			if(features[node.split_dimension] <= node.split_value)
-				extend_block(node.child_left, tree_id, features, label);
-			else if(features[node.split_dimension] > node.split_value)
-				extend_block(node.child_right, tree_id, features, label);
-			//NOTE: we don't update the counters of labels here because the counting will be done when prediction is required.
-			//We can optimize that.
-		}
-		else{
-			//Update the counter of label
-			node.counters[label] += 1;
 		}
 	}
 }
@@ -326,11 +324,18 @@ bool train_tree(feature_type const* features, int const label, int const tree_id
 		root.child_left = -1;
 		root.tau = 0;
 
+		node_available -= 1;
+
 		//Sample the root with the new data point
 		sample_block(root_id, features, label);
+		base.statistics.increase_error();
 	}
 	else{ //Partial fit
 		root_id = base.root;
+		double posterior_means[label_count] = {0};
+		predict_tree(features, tree_id, posterior_means);
+		int const prediction = index_max(posterior_means, label_count);
+		base.statistics.update(label, prediction);
 		extend_block(root_id, tree_id, features, label);
 	}
 	return true;
@@ -471,15 +476,18 @@ public:
  * @param discount_factor The discount factor :).
  */
 CoarseMondrianForest(double const lifetime, double const base_measure, double const discount_factor, int const tree_count){
+#ifdef DEBUG
+	assert(tree_count >= 1 && "Must have one tree at least");
+#endif
 	this->lifetime = lifetime;
 	this->base_measure = base_measure;
 	this->discount_factor = discount_factor;
 	this->tree_count = tree_count;
 
-	int statistics_memory = tree_count * sizeof(TreeBase);
-	int remaining_memory = max_size - statistics_memory;
+	int const statistics_memory = tree_count * sizeof(TreeBase);
+	int const remaining_memory = max_size - statistics_memory;
 	this->node_count = (remaining_memory - (remaining_memory%sizeof(Node))) / sizeof(Node);
-
+	this->node_available = node_count;
 	//Init all roots as empty 
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i)
@@ -494,6 +502,7 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 
 	cout << "Node Memory = " << remaining_memory << endl;
 	cout << "Tree Base Memory = " << statistics_memory << endl;
+	assert(node_count >= tree_count && "Not enough memory to have one node per tree");
 #endif
 }
 /**
@@ -536,12 +545,7 @@ int predict(feature_type const* features, double* scores = nullptr){
 		sum_posterior_mean[k] /= static_cast<double>(tree_count);
 
 	//Finally, we look for the best label
-	int best = 0;
-	for(int i = 1; i < label_count; ++i){
-		if(sum_posterior_mean[i] > sum_posterior_mean[best])
-			best = i;
-	}
-	return best;
+	return index_max(sum_posterior_mean, label_count);
 }
 };
 
