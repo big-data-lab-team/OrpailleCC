@@ -120,6 +120,9 @@ struct TreeBase{
 
 unsigned char buffer[max_size];
 
+#ifdef DEBUG
+unsigned int total_count = 0;
+#endif
 //The number of nodes
 int node_count = 0;
 int node_available = 0;
@@ -216,6 +219,10 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 			nodes()[new_parent].tau = parent_tau + E;
 			//insert new leaf, sibbling of the current one
 			new_sibling = available_node();
+			node_available -= 2;
+			#ifdef DEBUG
+			cout << "node_available = 0" << endl;
+			#endif
 			//Update the box of the new parent
 			for(int i = 0; i < feature_count; ++i){
 				nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
@@ -311,6 +318,9 @@ void sample_block(int const node_id, feature_type const* features, int const lab
 bool train_tree(feature_type const* features, int const label, int const tree_id){
 	int root_id;
 	TreeBase& base = tree_bases()[tree_id];
+#ifdef DEBUG
+	cout << "Training Tree " << tree_id << endl;
+#endif
 	if (base.is_empty()){ //The root of the tree does not exist yet
 		//Pick a new node
 		root_id = available_node();
@@ -512,12 +522,24 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
  * @param label The label of the data point.
  */
 bool train(feature_type const* features, int const label){
-	bool fully_trained;
+	bool fully_trained = true;
 	for(int i = 0; i < tree_count; ++i){
 		bool has_trained = train_tree(features, label, i);
 		if(!has_trained)
 			fully_trained = false;
 	}
+#ifdef DEBUG
+	if(!fully_trained){
+		cout << "Not fully trained." << endl;
+	}
+	total_count += 1;
+	TreeBase* bases = tree_bases();
+	for(int i = 0; i < tree_count; ++i){
+		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score() << endl;
+	}
+	cout << "Nodes remaining:" << total_count << "," << node_available << endl;
+
+#endif
 	return fully_trained;
 }
 /**

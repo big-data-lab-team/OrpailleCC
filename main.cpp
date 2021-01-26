@@ -6,10 +6,10 @@
 #include "reservoir_sampling.hpp"
 #include "mondrian_coarse.hpp"
 
-//#ifdef DEBUG
-//#include <iostream>
-//using namespace std;
-//#endif
+#ifdef DEBUG
+#include <iostream>
+using namespace std;
+#endif
 
 
 struct funct{
