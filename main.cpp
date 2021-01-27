@@ -71,7 +71,9 @@ int main(){
 
 	double scores[2];
 	int result = classifier.predict(dt[0], scores);
+#ifdef DEBUG
 	cout << "Prediction: " << result << endl;
 	cout << "True Label: " << labels[0] << endl;
+#endif
 	//result = classifier.predict(dt[2], scores);
 }
