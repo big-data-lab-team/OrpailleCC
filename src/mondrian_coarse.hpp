@@ -478,6 +478,60 @@ void update_posterior_count(void){
 		if(!bases[i].is_empty())
 			update_posterior_count(bases[i].root);
 }
+int tree_depth(int const tree_id) const{
+	int root_id;
+	TreeBase const& base = tree_bases()[tree_id];
+	root_id = base.root;
+    #define MAX_DEPTH 30
+	int stack[MAX_DEPTH];
+	for(int i = 0; i < MAX_DEPTH; ++i)
+		stack[i] = -1;
+
+	int node_id = root_id;
+	int depth = 1, max_depth = 1;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	for(int i = 0; i < node_count; ++i){
+		Node const& node = nodes()[node_id];	
+		if (node.is_leaf()){
+			//acknowledge the depth
+			if(depth > max_depth)
+				max_depth = depth;
+
+			//Check if the only leaf of the tree is the root.
+			if(node_id != root_id)
+				node_id = node.parent;
+			else
+				break;
+			depth -= 1;
+		}
+		else{
+			if (stack[depth] == -1){ //going right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1 && node_id != root_id){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				node_id = node.parent;
+			}
+			else if (stack[depth] == 1 && node_id == root_id){ //We have checked both children of the root
+				break;
+			}
+			#ifdef DEBUG
+			else{
+				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_depth: if statement is strange" << endl;
+			}
+			#endif
+		}
+	}
+	return max_depth;
+}
 public:
 /**
  * Constructor.
@@ -528,7 +582,7 @@ bool train(feature_type const* features, int const label){
 		if(!has_trained)
 			fully_trained = false;
 	}
-#ifdef DEBUG
+    #ifdef DEBUG
 	if(!fully_trained){
 		cout << "Not fully trained." << endl;
 	}
@@ -536,10 +590,11 @@ bool train(feature_type const* features, int const label){
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i){
 		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score() << endl;
+		cout << "Depth:" << total_count << "," << i << "," << tree_depth(i) << endl;
 	}
 	cout << "Nodes remaining:" << total_count << "," << node_available << endl;
 
-#endif
+    #endif
 	return fully_trained;
 }
 /**
