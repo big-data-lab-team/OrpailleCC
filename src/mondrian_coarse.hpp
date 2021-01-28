@@ -532,6 +532,65 @@ int tree_depth(int const tree_id) const{
 	}
 	return max_depth;
 }
+/**
+ * Reset all node of the tree but the root. The template max_stack_size is the maximum depth expected.
+ * @param tree_id The id of the tree which is an index between 0 and tree_count.
+ */
+template<int max_stack_size=30>
+void tree_delete(int const tree_id) {
+	int root_id;
+	TreeBase const& base = tree_bases()[tree_id];
+	root_id = base.root;
+
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	//Start at the root, then dive inside the tree
+	int node_id = root_id;
+	int depth = 1;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	for(int i = 0; i < node_count && node_id >= 0; ++i){
+		Node const& node = nodes()[node_id];	
+		if (node.is_leaf()){
+			//Get the parent before reset (root parent will be a negative number)
+			//Since the loop stops if node_id is below 0, it's fine
+			node_id = node.parent;
+			node.reset();
+			depth -= 1;
+			node_available += 1;
+		}
+		else{  //Internal node
+			if (stack[depth] == -1){ //going right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+
+				//Get the parent before reset (root parent will be a negative number)
+				//Since the loop stops if node_id is below 0, it's fine
+				node_id = node.parent;
+				node.reset();
+				node_available += 1;
+			}
+		}
+	}
+	
+	//Reclaim the root after reset all nodes!
+	Node const& root = nodes()[root_id];	
+	root.tau = 0;
+	node_available -= 1;
+}
 public:
 /**
  * Constructor.
