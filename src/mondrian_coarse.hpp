@@ -478,13 +478,20 @@ void update_posterior_count(void){
 		if(!bases[i].is_empty())
 			update_posterior_count(bases[i].root);
 }
+/**
+ * Compute the depth of a tree. The template max_stack_size is the maximum depth expected.
+ * @param tree_id The id of the tree which is an index between 0 and tree_count.
+ */
+template<int max_stack_size=30>
 int tree_depth(int const tree_id) const{
 	int root_id;
 	TreeBase const& base = tree_bases()[tree_id];
 	root_id = base.root;
-    #define MAX_DEPTH 30
-	int stack[MAX_DEPTH];
-	for(int i = 0; i < MAX_DEPTH; ++i)
+
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
 		stack[i] = -1;
 
 	int node_id = root_id;
@@ -504,7 +511,7 @@ int tree_depth(int const tree_id) const{
 				break;
 			depth -= 1;
 		}
-		else{
+		else{ //Internal Node
 			if (stack[depth] == -1){ //going right
 				stack[depth] = 0;
 				depth += 1;
