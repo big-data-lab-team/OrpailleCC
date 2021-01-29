@@ -558,7 +558,7 @@ void tree_delete(int const tree_id) {
 	int depth = 1;
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
 	for(int i = 0; i < node_count && node_id >= 0; ++i){
-		Node const& node = nodes()[node_id];	
+		Node& node = nodes()[node_id];	
 		if (node.is_leaf()){
 			//Get the parent before reset (root parent will be a negative number)
 			//Since the loop stops if node_id is below 0, it's fine
@@ -592,7 +592,7 @@ void tree_delete(int const tree_id) {
 	}
 	
 	//Reclaim the root after reset all nodes!
-	Node const& root = nodes()[root_id];	
+	Node& root = nodes()[root_id];	
 	root.tau = 0;
 	node_available -= 1;
 }
