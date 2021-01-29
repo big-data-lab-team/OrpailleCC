@@ -192,7 +192,7 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 	//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
 	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
 	bool update_box = false;
-	if(E >= 0 && parent_tau + E < node.tau){//Introduce a new parent and a new sibling
+	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2){//Introduce a new parent and a new sibling
 		Utils::turn_array_into_probability(probabilities, feature_count, sum);
 		//sample features with probability proportional to e_lower[i] + e_upper[i]
 		int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
@@ -207,85 +207,83 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 			lower_value = features[dimension];
 			upper_value = node.bound_lower[dimension];
 		}
-		
+
 		//sample the split between [lower_value, upper_value]
 		double const split_value = func::rand_uniform()*(upper_value - lower_value) + lower_value;
 		int new_parent, new_sibling;
 		//insert new node above the current one
-		if(node_available >= 2){
-			new_parent = available_node();
-			nodes()[new_parent].split_dimension = dimension;
-			nodes()[new_parent].split_value = split_value;
-			nodes()[new_parent].tau = parent_tau + E;
-			//insert new leaf, sibbling of the current one
-			new_sibling = available_node();
-			node_available -= 2;
-			#ifdef DEBUG
-			cout << "node_available = 0" << endl;
-			#endif
-			//Update the box of the new parent
-			for(int i = 0; i < feature_count; ++i){
-				nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
-				nodes()[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
-			}
-			//NOTE Creates counters for the label of the new parent
-			//for(int i = 0; i < label_count; ++i)
-			//nodes[new_parent].counters[i] = node.counters[i];
-			//nodes[new_parent].counters[label] += 1;
-
-			//Creates counters for the label of the new sibling
-			for(int i = 0; i < label_count; ++i)
-				nodes()[new_sibling].counters[i] = 0;
-			//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
-
-			//Make the connections between the new nodes
-			nodes()[new_parent].parent = node.parent;
-			if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
-				tree_bases()[tree_id].root = new_parent;
-			else{
-				Node& parent = nodes()[node.parent];
-				if(parent.child_left == node_id)
-					parent.child_left = new_parent;
-				else
-					parent.child_right = new_parent; 
-			}
-
-
-			node.parent = new_parent;
-
-			nodes()[new_sibling].parent = new_parent;
-			if(features[dimension] == upper_value){ //right
-				nodes()[new_parent].child_right = new_sibling;
-				nodes()[new_parent].child_left = node_id;
-			}
-			else{ //left
-				nodes()[new_parent].child_left = new_sibling;
-				nodes()[new_parent].child_right = node_id;
-			}
-
-			sample_block(new_sibling, features, label);
+		new_parent = available_node();
+		nodes()[new_parent].split_dimension = dimension;
+		nodes()[new_parent].split_value = split_value;
+		nodes()[new_parent].tau = parent_tau + E;
+		//insert new leaf, sibbling of the current one
+		new_sibling = available_node();
+		node_available -= 2;
+#ifdef DEBUG
+		cout << "node_available = 0" << endl;
+#endif
+		//Update the box of the new parent
+		for(int i = 0; i < feature_count; ++i){
+			nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
+			nodes()[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
 		}
-		else{ //Otherwise, just update the box
-			//update lower bound and upper bound of this node
-			for(int i = 0; i < feature_count; ++i){
-				if(node.bound_lower[i] > features[i])
-					node.bound_lower[i] = features[i]; 
-				if(node.bound_upper[i] < features[i])
-					node.bound_upper[i] = features[i]; 
-			}
-			//if not leaf, recurse on the node that contains the data point
-			if(!node.is_leaf()){
-				if(features[node.split_dimension] <= node.split_value)
-					extend_block(node.child_left, tree_id, features, label);
-				else if(features[node.split_dimension] > node.split_value)
-					extend_block(node.child_right, tree_id, features, label);
-				//NOTE: we don't update the counters of labels here because the counting will be done when prediction is required.
-				//We can optimize that.
-			}
-			else{
-				//Update the counter of label
-				node.counters[label] += 1;
-			}
+		//NOTE Creates counters for the label of the new parent
+		//for(int i = 0; i < label_count; ++i)
+		//nodes[new_parent].counters[i] = node.counters[i];
+		//nodes[new_parent].counters[label] += 1;
+
+		//Creates counters for the label of the new sibling
+		for(int i = 0; i < label_count; ++i)
+			nodes()[new_sibling].counters[i] = 0;
+		//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
+
+		//Make the connections between the new nodes
+		nodes()[new_parent].parent = node.parent;
+		if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
+			tree_bases()[tree_id].root = new_parent;
+		else{
+			Node& parent = nodes()[node.parent];
+			if(parent.child_left == node_id)
+				parent.child_left = new_parent;
+			else
+				parent.child_right = new_parent; 
+		}
+
+
+		node.parent = new_parent;
+
+		nodes()[new_sibling].parent = new_parent;
+		if(features[dimension] == upper_value){ //right
+			nodes()[new_parent].child_right = new_sibling;
+			nodes()[new_parent].child_left = node_id;
+		}
+		else{ //left
+			nodes()[new_parent].child_left = new_sibling;
+			nodes()[new_parent].child_right = node_id;
+		}
+
+		sample_block(new_sibling, features, label);
+	}
+	else{ //Otherwise, just update the box
+		//update lower bound and upper bound of this node
+		for(int i = 0; i < feature_count; ++i){
+			if(node.bound_lower[i] > features[i])
+				node.bound_lower[i] = features[i]; 
+			if(node.bound_upper[i] < features[i])
+				node.bound_upper[i] = features[i]; 
+		}
+		//if not leaf, recurse on the node that contains the data point
+		if(!node.is_leaf()){
+			if(features[node.split_dimension] <= node.split_value)
+				extend_block(node.child_left, tree_id, features, label);
+			else if(features[node.split_dimension] > node.split_value)
+				extend_block(node.child_right, tree_id, features, label);
+			//NOTE: we don't update the counters of labels here because the counting will be done when prediction is required.
+			//We can optimize that.
+		}
+		else{
+			//Update the counter of label
+			node.counters[label] += 1;
 		}
 	}
 }
