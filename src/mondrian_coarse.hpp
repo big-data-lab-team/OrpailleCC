@@ -540,12 +540,12 @@ int tree_depth(int const tree_id) const{
 /**
  * Reset all node of the tree but the root. The template max_stack_size is the maximum depth expected.
  * @param tree_id The id of the tree which is an index between 0 and tree_count.
+ * @return Returns false if the maximum depth is exceed or if the tree contains more than *node_count*, which is an error in the structure.
  */
 template<int max_stack_size=30>
-void tree_delete(int const tree_id) {
-	int root_id;
+bool tree_delete(int const tree_id) {
 	TreeBase const& base = tree_bases()[tree_id];
-	root_id = base.root;
+	int const root_id = base.root;
 
 	//Initialize an array to keep track of where we have to go at each tree level.
 	//The max depth expected is MAX_DEPTH.
@@ -555,15 +555,19 @@ void tree_delete(int const tree_id) {
 
 	//Start at the root, then dive inside the tree
 	int node_id = root_id;
-	int depth = 1;
+	int depth = 0;
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
-	for(int i = 0; i < node_count && node_id >= 0; ++i){
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
 		Node& node = nodes()[node_id];	
 		if (node.is_leaf()){
 			//Get the parent before reset (root parent will be a negative number)
 			//Since the loop stops if node_id is below 0, it's fine
 			node_id = node.parent;
 			node.reset();
+
+			i += 1;
 			depth -= 1;
 			node_available += 1;
 		}
@@ -581,6 +585,7 @@ void tree_delete(int const tree_id) {
 			else if (stack[depth] == 1){ //Go up
 				stack[depth] = -1; //Reset to -1
 				depth -= 1;
+				i += 1;
 
 				//Get the parent before reset (root parent will be a negative number)
 				//Since the loop stops if node_id is below 0, it's fine
@@ -589,12 +594,18 @@ void tree_delete(int const tree_id) {
 				node_available += 1;
 			}
 		}
+		if(depth >= max_stack_size)
+			return false;
 	}
-	
 	//Reclaim the root after reset all nodes!
 	Node& root = nodes()[root_id];	
 	root.tau = 0;
+	
 	node_available -= 1;
+
+	if(depth != -1)
+		return false;
+	return true;
 }
 public:
 /**
