@@ -528,7 +528,7 @@ int tree_depth(int const tree_id) const{
 			}
 			#ifdef DEBUG
 			else{
-				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_depth: if statement is strange" << endl;
+				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_depth: stack[" << depth << "] == " << stack[depth] << " (should be -1, 0, or 1)" << endl;
 			}
 			#endif
 		}
