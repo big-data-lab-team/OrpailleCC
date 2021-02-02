@@ -493,20 +493,20 @@ int tree_depth(int const tree_id) const{
 		stack[i] = -1;
 
 	int node_id = root_id;
-	int depth = 1, max_depth = 1;
+	int depth = 0, max_depth = 1;
+	
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
-	for(int i = 0; i < node_count; ++i){
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
 		Node const& node = nodes()[node_id];	
 		if (node.is_leaf()){
+			i += 1;
 			//acknowledge the depth
 			if(depth > max_depth)
 				max_depth = depth;
 
-			//Check if the only leaf of the tree is the root.
-			if(node_id != root_id)
-				node_id = node.parent;
-			else
-				break;
+			node_id = node.parent;
 			depth -= 1;
 		}
 		else{ //Internal Node
@@ -520,13 +520,11 @@ int tree_depth(int const tree_id) const{
 				depth += 1;
 				node_id = node.child_left;
 			}
-			else if (stack[depth] == 1 && node_id != root_id){ //Go up
+			else if (stack[depth] == 1){ //Go up
+				i += 1;
 				stack[depth] = -1; //Reset to -1
 				depth -= 1;
 				node_id = node.parent;
-			}
-			else if (stack[depth] == 1 && node_id == root_id){ //We have checked both children of the root
-				break;
 			}
 			#ifdef DEBUG
 			else{
@@ -535,7 +533,7 @@ int tree_depth(int const tree_id) const{
 			#endif
 		}
 	}
-	return max_depth;
+	return max_depth+1;
 }
 /**
  * Reset all node of the tree but the root. The template max_stack_size is the maximum depth expected.
