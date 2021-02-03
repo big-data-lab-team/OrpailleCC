@@ -596,11 +596,8 @@ bool tree_delete(int const tree_id) {
 			return false;
 	}
 	//Reclaim the root after reset all nodes!
-	Node& root = nodes()[root_id];	
-	root.tau = 0;
+	tree_bases()[tree_id].reset();
 	
-	node_available -= 1;
-
 	if(depth != -1)
 		return false;
 	return true;
@@ -666,7 +663,12 @@ bool train(feature_type const* features, int const label){
 		cout << "Depth:" << total_count << "," << i << "," << tree_depth(i) << endl;
 	}
 	cout << "Nodes remaining:" << total_count << "," << node_available << endl;
-
+	if(node_available <= 1){
+		int i = rand()%tree_count;
+		cout << "Delete " << i << endl;
+		tree_delete(i);
+		train_tree(features, label, i);
+	}
     #endif
 	return fully_trained;
 }
