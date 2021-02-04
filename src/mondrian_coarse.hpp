@@ -107,6 +107,7 @@ typedef MondrianNode<feature_count, label_count> Node;
 //The node structure
 struct TreeBase{
 	static const int EMPTY_ROOT = -1;
+	bool paused = false;
 	int root;
 	Statistic statistics;
 	bool is_empty(void) const{
@@ -114,7 +115,8 @@ struct TreeBase{
 	}
 	void reset(void){
 		root = EMPTY_ROOT;
-		//TODO statistics.reset();
+		paused = false;
+		statistics.reset();
 	}
 };
 
@@ -480,7 +482,7 @@ void update_posterior_count(void){
  * Compute the depth of a tree. The template max_stack_size is the maximum depth expected.
  * @param tree_id The id of the tree which is an index between 0 and tree_count.
  */
-template<int max_stack_size=30>
+template<int max_stack_size=100>
 int tree_depth(int const tree_id) const{
 	int root_id;
 	TreeBase const& base = tree_bases()[tree_id];
@@ -540,7 +542,7 @@ int tree_depth(int const tree_id) const{
  * @param tree_id The id of the tree which is an index between 0 and tree_count.
  * @return Returns false if the maximum depth is exceed or if the tree contains more than *node_count*, which is an error in the structure.
  */
-template<int max_stack_size=30>
+template<int max_stack_size=100>
 bool tree_delete(int const tree_id) {
 	TreeBase const& base = tree_bases()[tree_id];
 	int const root_id = base.root;
