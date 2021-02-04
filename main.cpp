@@ -62,6 +62,11 @@ class ErrorMetrics{
 		error_count += c;
 
 	}
+	void reset(){
+		count = 0;
+		error_count = 0;
+	}
+};
 };
 int main(){
 
