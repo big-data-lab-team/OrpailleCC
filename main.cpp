@@ -67,6 +67,42 @@ class ErrorMetrics{
 		error_count = 0;
 	}
 };
+template<int label_count>
+class KappaMetrics{
+	int confusion[label_count][label_count];
+	int total;
+	public:
+	KappaMetrics(){
+		reset();
+	}
+	void update(int const true_label, int const prediction){
+		confusion[true_label][prediction] += 1;
+		total += 1;
+	}
+	double score(void) const{
+		double diaganol = 0;
+		double sum_colrow = 0;
+		for(int i = 0; i < label_count; ++i){
+			diaganol += confusion[i][i];
+			double sum_col = 0, sum_row = 0;
+			for(int j = 0; j < label_count; ++j){
+				sum_col += confusion[i][j];
+				sum_row += confusion[j][i];
+			}
+			sum_colrow += sum_col * sum_row;
+		}
+		return (static_cast<double>(total) * diaganol - sum_colrow) / (static_cast<double>(total) * static_cast<double>(total) - sum_colrow * 100);
+	}
+	void increase_error(int const c=1){
+		confusion[0][1] += c;
+		total += c;
+	}
+	void reset(){
+		for(int i = 0; i < label_count; ++i)
+			for(int j = 0; j < label_count; ++j)
+				confusion[i][j] = 0;
+		total = 0;
+	}
 };
 int main(){
 
