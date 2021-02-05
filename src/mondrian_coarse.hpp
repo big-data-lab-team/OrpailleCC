@@ -118,6 +118,9 @@ struct TreeBase{
 		paused = false;
 		statistics.reset();
 	}
+	bool is_paused(void) const{
+		return paused;
+	}
 };
 
 unsigned char buffer[max_size];
@@ -194,7 +197,7 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 	//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
 	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
 	bool update_box = false;
-	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2){//Introduce a new parent and a new sibling
+	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !tree_bases()[tree_id].is_paused()){//Introduce a new parent and a new sibling
 		Utils::turn_array_into_probability(probabilities, feature_count, sum);
 		//sample features with probability proportional to e_lower[i] + e_upper[i]
 		int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
@@ -666,10 +669,13 @@ bool train(feature_type const* features, int const label){
 	}
 	cout << "Nodes remaining:" << total_count << "," << node_available << endl;
 	if(node_available <= 1){
+		for(int i = 0; i < tree_count; ++i)
+			bases[i].paused = true;
 		int i = rand()%tree_count;
 		cout << "Delete " << i << endl;
 		tree_delete(i);
 		train_tree(features, label, i);
+		bases[i].paused = false;
 	}
     #endif
 	return fully_trained;
