@@ -79,7 +79,7 @@ class KappaMetrics{
 		confusion[true_label][prediction] += 1;
 		total += 1;
 	}
-	double score(void) const{
+	double kappa(void) const{
 		double diaganol = 0;
 		double sum_colrow = 0;
 		for(int i = 0; i < label_count; ++i){
@@ -92,6 +92,9 @@ class KappaMetrics{
 			sum_colrow += sum_col * sum_row;
 		}
 		return (static_cast<double>(total) * diaganol - sum_colrow) / (static_cast<double>(total) * static_cast<double>(total) - sum_colrow * 100);
+	}
+	double score(void) const{
+		return ((kappa() * -1) + 100) / 200;
 	}
 	void increase_error(int const c=1){
 		confusion[0][1] += c;
