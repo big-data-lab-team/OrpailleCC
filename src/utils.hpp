@@ -49,6 +49,14 @@ class Utils{
 	 *   	+ log function: A function that run the natural logarithm.
 	 * @param rate The lambda parameter
 	 */
+	template<class T>
+	static int index_max(T* array, int const size) {
+		int best = 0;
+		for(int i = 1; i < size; ++i)
+			if(array[i] > array[best])
+				best = i;
+		return best;
+	}
 	template<class func>
 	static double rand_exponential(double const rate){
 		double const u = func::rand_uniform(); //Sample a random number between [0,1[

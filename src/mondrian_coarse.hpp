@@ -152,14 +152,6 @@ TreeBase* tree_bases() {
 TreeBase const* tree_bases() const{
 	return reinterpret_cast<TreeBase const*>(buffer + max_size - tree_count * sizeof(TreeBase));
 }
-template<class T>
-int index_max(T* array, int const size) {
-	int best = 0;
-	for(int i = 1; i < size; ++i)
-		if(array[i] > array[best])
-			best = i;
-	return best;
-}
 /**
  *	Return the index of an empty node. 
  */
@@ -347,7 +339,7 @@ bool train_tree(feature_type const* features, int const label, int const tree_id
 		root_id = base.root;
 		double posterior_means[label_count] = {0};
 		predict_tree(features, tree_id, posterior_means);
-		int const prediction = index_max(posterior_means, label_count);
+		int const prediction = Utils::index_max(posterior_means, label_count);
 		base.statistics.update(label, prediction);
 		extend_block(root_id, tree_id, features, label);
 	}
@@ -705,7 +697,7 @@ int predict(feature_type const* features, double* scores = nullptr){
 		sum_posterior_mean[k] /= static_cast<double>(tree_count);
 
 	//Finally, we look for the best label
-	return index_max(sum_posterior_mean, label_count);
+	return Utils::index_max(sum_posterior_mean, label_count);
 }
 };
 
