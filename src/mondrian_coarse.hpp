@@ -599,6 +599,32 @@ bool tree_delete(int const tree_id) {
 		return false;
 	return true;
 }
+void relocate_node(int const old_index, int const new_index){
+	//TODO
+}
+void tree_add(void){
+	int const index_tree_base = (buffer + max_size - tree_count * sizeof(TreeBase));
+	int const new_index_tree_base = index_tree_base - sizeof(TreeBase);
+	int const index_last_node = node_count * sizeof(Node);
+	if(new_index_tree_base < index_last_node){
+		int const space_to_free = index_last_node - new_index_tree_base;	
+		int const number_of_node_to_move = (space_to_free - space_to_free%sizeof(Node)) / sizeof(Node) + ((space_to_free%sizeof(Node)) > 0);
+		int const old_node_count = node_count;
+		//Update node_count since available_node works with that number, that's perfect
+		node_count -= number_of_node_to_move;
+		for(int i = 0; i < number_of_node_to_move; ++i){
+			int const relocating_index = available_node();
+			relocate_node(node_count + i, relocating_index);
+		}
+	}
+	//Shift all the tree base (to keep order of the tree :D. Mainly to track the performance of each tree, otherwise, we can just update tree_count and reset base 0.
+	for(int i = 0; i < tree_count; ++i)
+		tree_bases()[i-1] = tree_bases()[i];
+	tree_count += 1;
+
+	//initialize the new tree base;
+	tree_bases()[tree_count-1].reset();
+}
 public:
 /**
  * Constructor.
