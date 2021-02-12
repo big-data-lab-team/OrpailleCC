@@ -476,7 +476,7 @@ void update_posterior_count(void){
  * @param tree_id The id of the tree which is an index between 0 and tree_count.
  */
 template<int max_stack_size=100>
-int tree_depth(int const tree_id) const{
+int tree_depth(int const tree_id, int* tree_node_count) const{
 	int root_id;
 	TreeBase const& base = tree_bases()[tree_id];
 	root_id = base.root;
@@ -528,6 +528,8 @@ int tree_depth(int const tree_id) const{
 			#endif
 		}
 	}
+	if(tree_node_count != nullptr)
+		*tree_node_count = i;
 	return max_depth+1;
 }
 /**
