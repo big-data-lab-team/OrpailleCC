@@ -216,9 +216,7 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 		//insert new leaf, sibbling of the current one
 		new_sibling = available_node();
 		node_available -= 2;
-#ifdef DEBUG
-		cout << "node_available = 0" << endl;
-#endif
+
 		//Update the box of the new parent
 		for(int i = 0; i < feature_count; ++i){
 			nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
