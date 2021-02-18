@@ -55,6 +55,23 @@ struct MondrianNode{
 			bound_upper[i] = src.bound_upper[i];
 		}
 	}
+	void operator=(MondrianNode const& node){
+		if(&node != this){
+			split_dimension = node.split_dimension;
+			split_value = node.split_value;
+			child_left = node.child_left;
+			child_right = node.child_right;
+			parent = node.parent;
+			tau = node.tau;
+			for(int i = 0; i < feature_count; ++i){
+				bound_lower[i] = node.bound_lower[i];
+				bound_upper[i] = node.bound_upper[i];
+			}
+			for(int i = 0; i < label_count; ++i){
+				counters[i] = node.counters[i];
+			}
+		}
+	}
 	#ifdef DEBUG
 	void print(bool all = false) const{
 		cout << "Split dim: " << split_dimension << "\tSplit val: " << split_value << endl;
