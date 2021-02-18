@@ -638,11 +638,11 @@ void tree_add(void){
 	int const index_tree_base = (buffer + max_size - tree_count * sizeof(TreeBase));
 	int const new_index_tree_base = index_tree_base - sizeof(TreeBase);
 	int const index_last_node = node_count * sizeof(Node);
-	if(new_index_tree_base < index_last_node){
+	if(new_index_tree_base < index_last_node){ //We need to relocate nodes
 		int const space_to_free = index_last_node - new_index_tree_base;	
 		int const number_of_node_to_move = (space_to_free - space_to_free%sizeof(Node)) / sizeof(Node) + ((space_to_free%sizeof(Node)) > 0);
 		int const old_node_count = node_count;
-		//Update node_count since available_node works with that number, that's perfect
+		//Update node_count since *available_node* works with that number, that's perfect
 		node_count -= number_of_node_to_move;
 		for(int i = 0; i < number_of_node_to_move; ++i){
 			int const relocating_index = available_node();
