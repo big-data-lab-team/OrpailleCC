@@ -715,14 +715,32 @@ bool train(feature_type const* features, int const label){
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i){
 		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score() << endl;
-		cout << "Depth:" << total_count << "," << i << "," << tree_depth(i) << endl;
+		int node_count = 0;
+		int depth = tree_depth(i, &node_count);
+		cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
 	}
 	cout << "Nodes remaining:" << total_count << "," << node_available << endl;
+	cout << "Tree count:" << tree_count << endl;
 	if(node_available <= 1){
-		for(int i = 0; i < tree_count; ++i)
+		double scores[tree_count];
+		double sum = 0;
+		for(int i = 0; i < tree_count; ++i){
 			bases[i].paused = true;
-		int i = rand()%tree_count;
-		cout << "Delete " << i << endl;
+			scores[i] = bases[i].statistics.score();
+			sum += scores[i];
+		}
+		cout << "Making array" << endl;
+		Utils::turn_array_into_probability(scores, tree_count, sum);
+		cout << "Picking numbers" << endl;
+		for(int i = 0; i < tree_count; ++i){
+			cout << scores[i] << " ";
+		}
+		cout << endl;
+		int i = Utils::pick_from_distribution<func>(scores, tree_count);
+		//int i = 10;
+		//int i = Utils::index_max(scores, tree_count);
+		//int i = rand()%tree_count;
+		cout << "Deleting " << i << endl;
 		tree_delete(i);
 		train_tree(features, label, i);
 		bases[i].paused = false;
