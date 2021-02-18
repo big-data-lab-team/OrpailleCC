@@ -617,7 +617,22 @@ bool tree_delete(int const tree_id) {
 	return true;
 }
 void relocate_node(int const old_index, int const new_index){
-	//TODO
+	Node* n = nodes();
+	n[new_index] = n[old_index];
+	Node& node = n[new_index];
+	if(node.parent != Node::EMPTY_NODE){ //Change our parent's pointer if needed.
+		Node& parent = n[node.parent];
+		if(parent.child_left == old_index)
+			parent.child_left = new_index;
+		else
+			parent.child_right = new_index;
+	}
+	if(node.child_left != Node::EMPTY_NODE){ //Change children's parent if needed
+		Node& child = n[node.child_left];
+		child.parent = new_index;
+		child = n[node.child_right];
+		child.parent = new_index;
+	}
 }
 void tree_add(void){
 	int const index_tree_base = (buffer + max_size - tree_count * sizeof(TreeBase));
