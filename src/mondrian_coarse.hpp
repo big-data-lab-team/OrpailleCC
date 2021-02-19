@@ -635,7 +635,7 @@ void relocate_node(int const old_index, int const new_index){
 	}
 }
 void tree_add(void){
-	int const index_tree_base = (buffer + max_size - tree_count * sizeof(TreeBase));
+	int const index_tree_base = max_size - tree_count * sizeof(TreeBase);
 	int const new_index_tree_base = index_tree_base - sizeof(TreeBase);
 	int const index_last_node = node_count * sizeof(Node);
 	if(new_index_tree_base < index_last_node){ //We need to relocate nodes
