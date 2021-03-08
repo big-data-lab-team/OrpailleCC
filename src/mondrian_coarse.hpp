@@ -618,6 +618,17 @@ bool tree_delete(int const tree_id) {
 }
 void relocate_node(int const old_index, int const new_index){
 	Node* n = nodes();
+	if(n[old_index].available()){
+#ifdef DEBUG
+		cout << "Relocate of " << old_index << " not done because node is empty." << endl;
+#endif
+		return;
+	}
+	else{
+#ifdef DEBUG
+		cout << "Relocate " << old_index << " to " << new_index << endl;
+#endif
+	}
 	n[new_index] = n[old_index];
 	Node& node = n[new_index];
 	if(node.parent != Node::EMPTY_NODE){ //Change our parent's pointer if needed.
