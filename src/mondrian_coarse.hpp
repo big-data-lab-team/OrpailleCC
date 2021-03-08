@@ -121,19 +121,19 @@ template<class feature_type, class func, class Statistic, int feature_count, int
 class CoarseMondrianForest{
 typedef MondrianNode<feature_count, label_count> Node;
 
-int const RESERVOIR_SAMPLING = 0;
-int const BIASED_SAMPLING = 1;
-int const PROGRESSIVE_SAMPLING = 1;
+#define RESERVOIR_SAMPLING 0
+#define BIASED_SAMPLING 1
+#define PROGRESSIVE_SAMPLING 2
 
-int const DEPTH_SIZE = 0;
-int const NODE_SIZE = 1;
-int const TREE_COUNT_SIZE = 2;
+#define DEPTH_SIZE 0
+#define NODE_SIZE 1
+#define TREE_COUNT_SIZE 2
 
-int const COBBLE_MANAGEMENT = 0;
-int const OPTIMISTIC_COBBLE_MANAGEMENT = 1;
-int const ROBUR_MANAGEMENT = 2;
-int const PHOENIX_MANAGEMENT = 3;
-int const PAUSING_PHOENIX_MANAGEMENT = 4;
+#define COBBLE_MANAGEMENT 0
+#define OPTIMISTIC_COBBLE_MANAGEMENT 1
+#define ROBUR_MANAGEMENT 2
+#define PHOENIX_MANAGEMENT 3
+#define PAUSING_PHOENIX_MANAGEMENT 4
 
 int const sampling_type = PROGRESSIVE_SAMPLING;
 int const size_type = NODE_SIZE;
