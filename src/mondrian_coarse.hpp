@@ -125,6 +125,7 @@ typedef MondrianNode<feature_count, label_count> Node;
 struct TreeBase{
 	static const int EMPTY_ROOT = -1;
 	bool paused = false;
+	int size = 0;
 	int root;
 	Statistic statistics;
 	bool is_empty(void) const{
