@@ -646,10 +646,8 @@ void relocate_node(int const old_index, int const new_index){
 			}
 	}
 	if(node.child_left != Node::EMPTY_NODE){ //Change children's parent if needed
-		Node& child = n[node.child_left];
-		child.parent = new_index;
-		child = n[node.child_right];
-		child.parent = new_index;
+		n[node.child_left].parent = new_index;
+		n[node.child_right].parent = new_index;
 	}
 }
 void tree_add(void){
