@@ -135,9 +135,9 @@ int const ROBUR_MANAGEMENT = 2;
 int const PHOENIX_MANAGEMENT = 3;
 int const PAUSING_PHOENIX_MANAGEMENT = 4;
 
-int sampling_type = PROGRESSIVE_SAMPLING;
-int size_type = NODE_SIZE;
-int tree_management = COBBLE_MANAGEMENT;
+int const sampling_type = PROGRESSIVE_SAMPLING;
+int const size_type = NODE_SIZE;
+int const tree_management = COBBLE_MANAGEMENT;
 
 //The node structure
 struct TreeBase{
