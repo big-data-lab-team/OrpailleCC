@@ -142,20 +142,26 @@ int const tree_management = COBBLE_MANAGEMENT;
 //The node structure
 struct TreeBase{
 	static const int EMPTY_ROOT = -1;
-	bool paused = false;
+	int node_count_limit = 0;
 	int size = 0;
 	int root;
 	Statistic statistics;
 	bool is_empty(void) const{
 		return root == EMPTY_ROOT;
 	}
-	void reset(void){
+	void reset(int const node_limit=1){
 		root = EMPTY_ROOT;
-		paused = false;
+		node_count_limit = node_limit;
 		statistics.reset();
 	}
-	bool is_paused(void) const{
-		return paused;
+	bool is_paused(int const tree_management = 0) const{
+		if(tree_management == ROBUR_MANAGEMENT || tree_management == PAUSING_PHOENIX_MANAGEMENT)
+			return size >= node_count_limit;
+		else if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
+			return false; //
+		else if(tree_management == PHOENIX_MANAGEMENT)
+			return false;
+		return false;
 	}
 };
 
@@ -225,7 +231,7 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 	//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
 	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
 	bool update_box = false;
-	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !tree_bases()[tree_id].is_paused()){//Introduce a new parent and a new sibling
+	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !tree_bases()[tree_id].is_paused(tree_management)){//Introduce a new parent and a new sibling
 		Utils::turn_array_into_probability(probabilities, feature_count, sum);
 		//sample features with probability proportional to e_lower[i] + e_upper[i]
 		int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
@@ -729,7 +735,7 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 	//Init all roots as empty 
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i)
-		tree_bases()[i].reset();
+		tree_bases()[i].reset(node_count);
 	for(int i = 0; i < node_count; ++i)
 		nodes()[i].reset();
 #ifdef DEBUG
@@ -786,7 +792,7 @@ bool train(feature_type const* features, int const label){
 		double sum = 0;
 		for(int i = 0; i < tree_count; ++i){
 			if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
-				bases[i].paused = true;
+				bases[i].node_count_limit = 0;
 			scores[i] = bases[i].statistics.score();
 			sum += scores[i];
 		}
@@ -805,7 +811,7 @@ bool train(feature_type const* features, int const label){
 		#endif
 		tree_reset(i);
 		train_tree(features, label, i);
-		bases[i].paused = false;
+		bases[i].node_count_limit = node_count;
 
 		//child_of(0);
 		//unravel(0);
@@ -817,7 +823,6 @@ bool train(feature_type const* features, int const label){
 				tree_add();
 		}
 	}
-    #endif
 	return fully_trained;
 }
 /**
