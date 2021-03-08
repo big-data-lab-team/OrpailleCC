@@ -121,6 +121,12 @@ template<class feature_type, class func, class Statistic, int feature_count, int
 class CoarseMondrianForest{
 typedef MondrianNode<feature_count, label_count> Node;
 
+int const RESERVOIR_SAMPLING = 0;
+int const BIASED_SAMPLING = 1;
+int const PROGRESSIVE_SAMPLING = 1;
+
+int sampling_type = PROGRESSIVE_SAMPLING;
+
 //The node structure
 struct TreeBase{
 	static const int EMPTY_ROOT = -1;
@@ -775,6 +781,16 @@ bool train(feature_type const* features, int const label){
 		tree_delete(i);
 		train_tree(features, label, i);
 		bases[i].paused = false;
+
+		//child_of(0);
+		//unravel(0);
+		//tree_dd(0);
+		if(sampling_type == PROGRESSIVE_SAMPLING){
+			double const space_for_trees = (static_cast<double>(node_available) / average_tree_size()) - 2;
+			double const probability = space_for_trees > -1 ? space_for_trees / (space_for_trees+1) : 0;
+			if(func::rand_uniform() < probability)
+				tree_add();
+		}
 	}
     #endif
 	return fully_trained;
