@@ -638,6 +638,13 @@ void relocate_node(int const old_index, int const new_index){
 		else
 			parent.child_right = new_index;
 	}
+	else{ //Otherwise, change the root
+		TreeBase* bases = tree_bases();
+		for(int i = 0; i < tree_count; ++i)
+			if(bases[i].root == old_index){
+				bases[i].root = new_index;
+			}
+	}
 	if(node.child_left != Node::EMPTY_NODE){ //Change children's parent if needed
 		Node& child = n[node.child_left];
 		child.parent = new_index;
