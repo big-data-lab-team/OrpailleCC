@@ -581,7 +581,7 @@ int tree_depth(int const tree_id, int* tree_node_count) const{
  * @return Returns false if the maximum depth is exceed or if the tree contains more than *node_count*, which is an error in the structure.
  */
 template<int max_stack_size=100>
-bool tree_delete(int const tree_id) {
+bool tree_reset(int const tree_id) {
 	TreeBase const& base = tree_bases()[tree_id];
 	int const root_id = base.root;
 
@@ -803,7 +803,7 @@ bool train(feature_type const* features, int const label){
 		#ifdef DEBUG
 		cout << "Deleting " << i << endl;
 		#endif
-		tree_delete(i);
+		tree_reset(i);
 		train_tree(features, label, i);
 		bases[i].paused = false;
 
