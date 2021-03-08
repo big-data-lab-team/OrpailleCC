@@ -650,16 +650,20 @@ void relocate_node(int const old_index, int const new_index){
 		n[node.child_right].parent = new_index;
 	}
 }
-void tree_add(void){
+bool tree_add(void){
 	int const index_tree_base = max_size - tree_count * sizeof(TreeBase);
 	int const new_index_tree_base = index_tree_base - sizeof(TreeBase);
 	int const index_last_node = node_count * sizeof(Node);
+
 	if(new_index_tree_base < index_last_node){ //We need to relocate nodes
 		int const space_to_free = index_last_node - new_index_tree_base;	
 		int const number_of_node_to_move = (space_to_free - space_to_free%sizeof(Node)) / sizeof(Node) + ((space_to_free%sizeof(Node)) > 0);
 		int const old_node_count = node_count;
+		if(2*number_of_node_to_move > node_available) //2 time because we gonna remove *number_of_node_to_move* from the pool and we need *number_of_node_to_move* additional node to relocate them.
+			return false;
 		//Update node_count since *available_node* works with that number, that's perfect
 		node_count -= number_of_node_to_move;
+		node_available -= number_of_node_to_move;
 		for(int i = 0; i < number_of_node_to_move; ++i){
 			int const relocating_index = available_node();
 			relocate_node(node_count + i, relocating_index);
@@ -672,6 +676,7 @@ void tree_add(void){
 
 	//initialize the new tree base;
 	tree_bases()[tree_count-1].reset();
+	return true;
 }
 public:
 /**
