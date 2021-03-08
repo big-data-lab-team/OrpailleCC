@@ -125,7 +125,19 @@ int const RESERVOIR_SAMPLING = 0;
 int const BIASED_SAMPLING = 1;
 int const PROGRESSIVE_SAMPLING = 1;
 
+int const DEPTH_SIZE = 0;
+int const NODE_SIZE = 1;
+int const TREE_COUNT_SIZE = 2;
+
+int const COBBLE_MANAGEMENT = 0;
+int const OPTIMISTIC_COBBLE_MANAGEMENT = 1;
+int const ROBUR_MANAGEMENT = 2;
+int const PHOENIX_MANAGEMENT = 3;
+int const PAUSING_PHOENIX_MANAGEMENT = 4;
+
 int sampling_type = PROGRESSIVE_SAMPLING;
+int size_type = NODE_SIZE;
+int tree_management = COBBLE_MANAGEMENT;
 
 //The node structure
 struct TreeBase{
@@ -745,39 +757,52 @@ bool train(feature_type const* features, int const label){
 			fully_trained = false;
 	}
     #ifdef DEBUG
-	if(!fully_trained){
-		cout << "Not fully trained." << endl;
-	}
+	if(!fully_trained)
+		cout << "[WARNING] Not fully trained. (" << __FILE__ << ":" << __LINE__ << ")" << endl;
 	total_count += 1;
+    #endif
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i){
-		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score() << endl;
 		int node_count = 0;
 		int depth = tree_depth(i, &node_count);
+		#ifdef DEBUG
+		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score() << endl;
 		cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
+		#endif
+		if(size_type == DEPTH_SIZE){
+			bases[i].size = depth;
+		}
+		else if(size_type == NODE_SIZE){
+			bases[i].size = node_count;
+		}
 	}
+    #ifdef DEBUG
 	cout << "Nodes remaining:" << total_count << "," << node_available << endl;
 	cout << "Tree count:" << tree_count << endl;
+	#endif
+
 	if(node_available <= 1){
 		double scores[tree_count];
 		double sum = 0;
 		for(int i = 0; i < tree_count; ++i){
-			bases[i].paused = true;
+			if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
+				bases[i].paused = true;
 			scores[i] = bases[i].statistics.score();
 			sum += scores[i];
 		}
-		cout << "Making array" << endl;
 		Utils::turn_array_into_probability(scores, tree_count, sum);
+
+		#ifdef DEBUG
 		cout << "Picking numbers" << endl;
 		for(int i = 0; i < tree_count; ++i){
 			cout << scores[i] << " ";
 		}
 		cout << endl;
-		int i = Utils::pick_from_distribution<func>(scores, tree_count);
-		//int i = 10;
-		//int i = Utils::index_max(scores, tree_count);
-		//int i = rand()%tree_count;
+		#endif
+		int const i = Utils::pick_from_distribution<func>(scores, tree_count);
+		#ifdef DEBUG
 		cout << "Deleting " << i << endl;
+		#endif
 		tree_delete(i);
 		train_tree(features, label, i);
 		bases[i].paused = false;
