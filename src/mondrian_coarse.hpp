@@ -489,6 +489,13 @@ void update_posterior_count(void){
 		if(!bases[i].is_empty())
 			update_posterior_count(bases[i].root);
 }
+double average_tree_size(void) const{
+	double sum = 0;
+	TreeBase const* tb = tree_bases();
+	for(int i = 0; i < tree_count; ++i)
+		sum += tb[i].size;
+	return sum/static_cast<double>(tree_count);
+}
 /**
  * Compute the depth of a tree. The template max_stack_size is the maximum depth expected.
  * @param tree_id The id of the tree which is an index between 0 and tree_count.
