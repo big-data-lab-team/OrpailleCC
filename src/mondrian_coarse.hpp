@@ -663,6 +663,8 @@ bool tree_add(void){
 			return false;
 		//Update node_count since *available_node* works with that number, that's perfect
 		node_count -= number_of_node_to_move;
+		//We remove exactly *number_of_node_to_move* because if the node to move is empty, there is one less node available.
+		//If the node is node empty, we need to relocate it to an available node, therefore minus 1 for node_available.
 		node_available -= number_of_node_to_move;
 		for(int i = 0; i < number_of_node_to_move; ++i){
 			int const relocating_index = available_node();
