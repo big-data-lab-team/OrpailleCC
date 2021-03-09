@@ -772,7 +772,7 @@ bool train(feature_type const* features, int const label){
 		int node_count = 0;
 		int depth = tree_depth(i, &node_count);
 		#ifdef DEBUG
-		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score() << endl;
+		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score(tree_count-1) << endl;
 		cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
 		#endif
 		if(size_type == DEPTH_SIZE){
@@ -793,7 +793,7 @@ bool train(feature_type const* features, int const label){
 		for(int i = 0; i < tree_count; ++i){
 			if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
 				bases[i].node_count_limit = 0;
-			scores[i] = bases[i].statistics.score(tree_count);
+			scores[i] = bases[i].statistics.score(tree_count-1);
 			sum += scores[i];
 		}
 		Utils::turn_array_into_probability(scores, tree_count, sum);
