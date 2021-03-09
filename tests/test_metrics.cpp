@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include "metrics.hpp"
 
-TEST(KappaMetrics, kappa) { 
+TEST(KappaMetrics, score) { 
 	KappaMetrics<3> metric;
 	metric.update(0, 0);
 	metric.update(0, 0);
@@ -850,4 +850,28 @@ TEST(ErrorMetrics, reset) {
 	metric.update(28,28);
 	metric.update(21,21);
 	ASSERT_NEAR(metric.score(), 0.49, 0.00001);
+}
+TEST(ReservoirSamplingMetrics, score) { 
+
+	int const sample_size = 10;
+	ReservoirSamplingMetrics sample[sample_size+1];
+	
+
+	for(int j = 0; j < 10; ++j){
+		double sum_proba = 0;
+		for(int i = 0; i < sample_size+1; ++i)
+			sum_proba += sample[i].score(sample_size);
+
+		ASSERT_NEAR(sum_proba, 1.0, 0.00001);
+
+		double const score_last_element = sample[sample_size].score(sample_size);
+		double const score_sample_element = sample[0].score(sample_size);
+
+		ASSERT_TRUE(score_last_element >= score_sample_element);
+	
+		//Advance the last element by 77.
+		for(int i = 0; i < 77; ++i)
+			sample[sample_size-1].reset();
+	}
+
 }
