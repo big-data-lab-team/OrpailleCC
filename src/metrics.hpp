@@ -7,7 +7,7 @@ class ErrorMetrics{
 		count += 1;
 		error_count += (true_label != prediction);
 	}
-	double score(void) const{
+	double score(int const tree_count=1) const{
 		return static_cast<double>(error_count) / static_cast<double>(count);
 	}
 	void increase_error(int const c=1){
@@ -55,7 +55,7 @@ class KappaMetrics{
 		}
 		return (static_cast<double>(total) * diaganol - sum_colrow) / (static_cast<double>(total) * static_cast<double>(total) - sum_colrow);
 	}
-	double score(void) const{
+	double score(int const tree_count=1) const{
 		return ((kappa() * -1) + 1) / 2;
 	}
 	void increase_error(int const c=1){
@@ -69,4 +69,30 @@ class KappaMetrics{
 		total = 0;
 	}
 };
-
+class ReservoirSamplingMetrics{
+	static int total_count;
+	int number;
+	public:
+	ReservoirSamplingMetrics(){
+		reset();
+	}
+	void operator=(ReservoirSamplingMetrics const& metric){
+		if(&metric != this){
+			number = metric.number;
+		}
+	}
+	void update(int const true_label, int const prediction){
+	}
+	double score(int const sample_size=1) const{
+		if(total_count == number)
+			return static_cast<double>(number - sample_size) / static_cast<double>(total_count);
+		return 1 / static_cast<double>(total_count);
+	}
+	void increase_error(int const c=1){
+	}
+	void reset(){
+		total_count += 1;
+		number = total_count;
+	}
+};
+int ReservoirSamplingMetrics::total_count = 0;

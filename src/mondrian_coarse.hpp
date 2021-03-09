@@ -793,7 +793,7 @@ bool train(feature_type const* features, int const label){
 		for(int i = 0; i < tree_count; ++i){
 			if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
 				bases[i].node_count_limit = 0;
-			scores[i] = bases[i].statistics.score();
+			scores[i] = bases[i].statistics.score(tree_count);
 			sum += scores[i];
 		}
 		Utils::turn_array_into_probability(scores, tree_count, sum);
