@@ -7,8 +7,14 @@ class ErrorMetrics{
 		count += 1;
 		error_count += (true_label != prediction);
 	}
-	double score(int const tree_count=1) const{
-		return static_cast<double>(error_count) / static_cast<double>(count);
+	double score(bool const invert=false, int const tree_size=-1) const{
+		if(tree_size > 0 && !invert)
+			return (static_cast<double>(error_count) / static_cast<double>(count)) * static_cast<double>(tree_size);
+		else if(tree_size <= 0 && !invert)
+			return (static_cast<double>(error_count) / static_cast<double>(count));
+		else if(tree_size > 0 && invert)
+			return (static_cast<double>(count - error_count) / static_cast<double>(count)) / static_cast<double>(tree_size);
+		return (static_cast<double>(count - error_count) / static_cast<double>(count));
 	}
 	void increase_error(int const c=1){
 		count += c;
@@ -55,8 +61,14 @@ class KappaMetrics{
 		}
 		return (static_cast<double>(total) * diaganol - sum_colrow) / (static_cast<double>(total) * static_cast<double>(total) - sum_colrow);
 	}
-	double score(int const tree_count=1) const{
-		return ((kappa() * -1) + 1) / 2;
+	double score(bool const invert = false, int const tree_size=-1) const{
+		if(tree_size > 0 && invert)
+			return ((kappa() + 1) / 2)/static_cast<double>(tree_size);
+		else if(tree_size <= 0 && invert)
+			return ((kappa() + 1) / 2);
+		else if(tree_size > 0 && !invert)
+			return (((kappa() * -1) + 1) / 2) * static_cast<double>(tree_size);
+		return (((kappa() * -1) + 1) / 2);
 	}
 	void increase_error(int const c=1){
 		confusion[0][1] += c;
@@ -83,7 +95,7 @@ class ReservoirSamplingMetrics{
 	}
 	void update(int const true_label, int const prediction){
 	}
-	double score(int const sample_size=1) const{
+	double score(bool const invert=false, int const sample_size=1) const{
 		if(total_count == number)
 			return static_cast<double>(number - sample_size) / static_cast<double>(total_count);
 		return 1 / static_cast<double>(total_count);
