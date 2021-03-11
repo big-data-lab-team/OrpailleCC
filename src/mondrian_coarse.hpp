@@ -377,10 +377,6 @@ bool train_tree(feature_type const* features, int const label, int const tree_id
 	}
 	else{ //Partial fit
 		root_id = base.root;
-		double posterior_means[label_count] = {0};
-		predict_tree(features, tree_id, posterior_means);
-		int const prediction = Utils::index_max(posterior_means, label_count);
-		base.statistics.update(label, prediction);
 		extend_block(root_id, tree_id, features, label);
 	}
 	return true;
@@ -757,6 +753,14 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
  */
 bool train(feature_type const* features, int const label){
 	bool fully_trained = true;
+
+	TreeBase* base = tree_bases();
+	for(int tree_id = 0; tree_id < tree_count; ++tree_id ){
+		double posterior_means[label_count] = {0};
+		predict_tree(features, tree_id, posterior_means);
+		int const prediction = Utils::index_max(posterior_means, label_count);
+		base[tree_id].statistics.update(label, prediction);
+	}
 	for(int i = 0; i < tree_count; ++i){
 		bool has_trained = train_tree(features, label, i);
 		if(!has_trained)
