@@ -138,6 +138,7 @@ typedef MondrianNode<feature_count, label_count> Node;
 int const sampling_type = PROGRESSIVE_SAMPLING;
 int const size_type = NODE_SIZE;
 int const tree_management = COBBLE_MANAGEMENT;
+int const use_cdm = 1;
 
 //The node structure
 struct TreeBase{
@@ -175,6 +176,10 @@ int node_count = 0;
 int node_available = 0;
 //The number of trees
 int tree_count = 0;	
+double pcdm = 0;
+double pcdm_upper_bound = 60;
+double pcdm_lower_bound = 55;
+double pcdm_fading_factor = 0.95;
 //The lifetime parameter
 double lifetime;
 //The base measure parameter
@@ -755,12 +760,22 @@ bool train(feature_type const* features, int const label){
 	bool fully_trained = true;
 
 	TreeBase* base = tree_bases();
+	double c = 0;
 	for(int tree_id = 0; tree_id < tree_count; ++tree_id ){
 		double posterior_means[label_count] = {0};
 		predict_tree(features, tree_id, posterior_means);
 		int const prediction = Utils::index_max(posterior_means, label_count);
 		base[tree_id].statistics.update(label, prediction);
+		if(label == prediction)
+			c += 1;
 	}
+	c = c / static_cast<double>(tree_count);
+	if(c < pcdm_lower_bound)
+		pcdm = -1 + pcdm * pcdm_fading_factor;
+	else if(c > pcdm_upper_bound)
+		pcdm = 1 + pcdm * pcdm_fading_factor;
+	else
+		pcdm *= pcdm_fading_factor;
 	for(int i = 0; i < tree_count; ++i){
 		bool has_trained = train_tree(features, label, i);
 		if(!has_trained)
