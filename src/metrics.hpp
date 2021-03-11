@@ -1,4 +1,3 @@
-template<int label_count>
 class ErrorMetrics{
 	int count = 0;
 	int error_count = 0;
