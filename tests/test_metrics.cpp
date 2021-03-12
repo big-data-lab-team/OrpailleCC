@@ -425,7 +425,7 @@ TEST(KappaMetrics, reset) {
 	ASSERT_NEAR(metric.kappa(), -0.030502885408079328, 0.0001);
 }
 TEST(ErrorMetrics, score) { 
-	ErrorMetrics<3> metric;
+	ErrorMetrics metric;
 	metric.update(0, 0);
 	metric.update(0, 0);
 	metric.update(1, 1);
@@ -438,7 +438,7 @@ TEST(ErrorMetrics, score) {
 	metric.update(0, 2);
 	ASSERT_NEAR(metric.score(), 0.4, 0.0001);
 
-	ErrorMetrics<34> metric1;
+	ErrorMetrics metric1;
 	metric1.update(0,1);
 	metric1.update(9,10);
 	metric1.update(33,1);
@@ -541,7 +541,7 @@ TEST(ErrorMetrics, score) {
 	metric1.update(21,22);
 	ASSERT_NEAR(metric1.score(), 1.0, 0.00001);
 
-	ErrorMetrics<34> metric2;
+	ErrorMetrics metric2;
 	metric2.update(0,0);
 	metric2.update(9,18);
 	metric2.update(33,33);
@@ -645,7 +645,7 @@ TEST(ErrorMetrics, score) {
 	ASSERT_NEAR(metric2.score(), 0.49, 0.00001);
 }
 TEST(ErrorMetrics, reset) { 
-	ErrorMetrics<34> metric;
+	ErrorMetrics metric;
 	metric.update(0,1);
 	metric.update(9,10);
 	metric.update(33,1);
@@ -860,12 +860,12 @@ TEST(ReservoirSamplingMetrics, score) {
 	for(int j = 0; j < 10; ++j){
 		double sum_proba = 0;
 		for(int i = 0; i < sample_size+1; ++i)
-			sum_proba += sample[i].score(sample_size);
+			sum_proba += sample[i].score(false, sample_size);
 
 		ASSERT_NEAR(sum_proba, 1.0, 0.00001);
 
-		double const score_last_element = sample[sample_size].score(sample_size);
-		double const score_sample_element = sample[0].score(sample_size);
+		double const score_last_element = sample[sample_size].score(false, sample_size);
+		double const score_sample_element = sample[0].score(false, sample_size);
 
 		ASSERT_TRUE(score_last_element >= score_sample_element);
 	
@@ -873,5 +873,4 @@ TEST(ReservoirSamplingMetrics, score) {
 		for(int i = 0; i < 77; ++i)
 			sample[sample_size-1].reset();
 	}
-
 }
