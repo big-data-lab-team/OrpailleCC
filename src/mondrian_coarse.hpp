@@ -769,6 +769,7 @@ bool train(feature_type const* features, int const label){
 		if(label == prediction)
 			c += 1;
 	}
+
 	c = c / static_cast<double>(tree_count);
 	if(c < pcdm_lower_bound)
 		pcdm = -1 + pcdm * pcdm_fading_factor;
@@ -776,6 +777,7 @@ bool train(feature_type const* features, int const label){
 		pcdm = 1 + pcdm * pcdm_fading_factor;
 	else
 		pcdm *= pcdm_fading_factor;
+
 	for(int i = 0; i < tree_count; ++i){
 		bool has_trained = train_tree(features, label, i);
 		if(!has_trained)
@@ -837,7 +839,7 @@ bool train(feature_type const* features, int const label){
 		//tree_dd(0);
 		if(sampling_type == PROGRESSIVE_SAMPLING){
 			double const space_for_trees = (static_cast<double>(node_available) / average_tree_size()) - 2;
-			double const probability = space_for_trees > -1 ? space_for_trees / (space_for_trees+1) : 0;
+			double const probability = space_for_trees > 0 ? space_for_trees / (space_for_trees+1) : 0;
 			if(func::rand_uniform() < probability)
 				tree_add();
 		}
