@@ -1,3 +1,4 @@
+template<bool use_ratio=false>
 class ErrorMetrics{
 	int count = 0;
 	int error_count = 0;
@@ -7,11 +8,11 @@ class ErrorMetrics{
 		error_count += (true_label != prediction);
 	}
 	double score(bool const invert=false, int const tree_size=-1) const{
-		if(tree_size > 0 && !invert)
+		if(use_ratio && !invert)
 			return (static_cast<double>(error_count) / static_cast<double>(count)) * static_cast<double>(tree_size);
-		else if(tree_size <= 0 && !invert)
+		else if(!use_ratio && !invert)
 			return (static_cast<double>(error_count) / static_cast<double>(count));
-		else if(tree_size > 0 && invert)
+		else if(use_ratio && invert)
 			return (static_cast<double>(count - error_count) / static_cast<double>(count)) / static_cast<double>(tree_size);
 		return (static_cast<double>(count - error_count) / static_cast<double>(count));
 	}
@@ -24,8 +25,11 @@ class ErrorMetrics{
 		count = 0;
 		error_count = 0;
 	}
+	bool ratio(void) const{
+		return use_ratio;
+	}
 };
-template<int label_count>
+template<int label_count, bool use_ratio=false>
 class KappaMetrics{
 	int confusion[label_count][label_count];
 	int total;
@@ -61,11 +65,11 @@ class KappaMetrics{
 		return (static_cast<double>(total) * diaganol - sum_colrow) / (static_cast<double>(total) * static_cast<double>(total) - sum_colrow);
 	}
 	double score(bool const invert = false, int const tree_size=-1) const{
-		if(tree_size > 0 && invert)
+		if(use_ratio && invert)
 			return ((kappa() + 1) / 2)/static_cast<double>(tree_size);
-		else if(tree_size <= 0 && invert)
+		else if(!use_ratio && invert)
 			return ((kappa() + 1) / 2);
-		else if(tree_size > 0 && !invert)
+		else if(use_ratio && !invert)
 			return (((kappa() * -1) + 1) / 2) * static_cast<double>(tree_size);
 		return (((kappa() * -1) + 1) / 2);
 	}
@@ -78,6 +82,9 @@ class KappaMetrics{
 			for(int j = 0; j < label_count; ++j)
 				confusion[i][j] = 0;
 		total = 0;
+	}
+	bool ratio(void) const{
+		return use_ratio;
 	}
 };
 class ReservoirSamplingMetrics{
@@ -104,6 +111,9 @@ class ReservoirSamplingMetrics{
 	void reset(){
 		total_count += 1;
 		number = total_count;
+	}
+	bool ratio(void) const{
+		return false;
 	}
 };
 int ReservoirSamplingMetrics::total_count = 0;
