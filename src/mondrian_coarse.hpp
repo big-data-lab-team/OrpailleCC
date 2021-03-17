@@ -1,4 +1,6 @@
 #include "utils.hpp"
+#include "metrics.hpp"
+#include <typeinfo>
 #ifdef DEBUG
 #include <iostream>
 using namespace std;
@@ -798,9 +800,12 @@ bool train(feature_type const* features, int const label){
 	total_count += 1;
     #endif
 	TreeBase* bases = tree_bases();
+	bool all_tree_grown = true;
 	for(int i = 0; i < tree_count; ++i){
 		int node_count = 0;
 		int depth = tree_depth(i, &node_count);
+		if(!bases[i].is_grown(tree_management))
+			all_tree_grown;
 		#ifdef DEBUG
 		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score(tree_count-1) << endl;
 		cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
@@ -817,13 +822,32 @@ bool train(feature_type const* features, int const label){
 	cout << "Tree count:" << tree_count << endl;
 	#endif
 
-	if(node_available <= 1){
+	if(node_available <= 1 || (tree_management == COBBLE_MANAGEMENT && all_tree_grown)){
 		double scores[tree_count];
 		double sum = 0;
 		for(int i = 0; i < tree_count; ++i){
 			if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
 				bases[i].node_count_limit = 0;
-			scores[i] = bases[i].statistics.score(tree_count-1);
+			if(use_cdm){
+				if(pcdm <= 0)
+					scores[i] = bases[i].statistics.score(false);
+				else
+					scores[i] = bases[i].statistics.score(true);
+			}
+			else{
+
+				if(bases[i].statistics.ratio())
+					scores[i] = bases[i].statistics.score(false, bases[i].size);
+				else
+				{
+					const std::type_info& ti1 = typeid(Statistic);
+					const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
+					if(ti1.hash_code() == ti2.hash_code()) //If RS
+						scores[i] = bases[i].statistics.score(false, tree_count-1);
+					else
+						scores[i] = bases[i].statistics.score(false);
+				}
+			}
 			sum += scores[i];
 		}
 		Utils::turn_array_into_probability(scores, tree_count, sum);
