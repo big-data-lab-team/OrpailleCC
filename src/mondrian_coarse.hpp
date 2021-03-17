@@ -164,6 +164,11 @@ struct TreeBase{
 			return false;
 		return false;
 	}
+	bool is_grown(int const tree_management = 0) const{
+		if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
+			return size >= node_count_limit; //
+		return is_paused(tree_management);
+	}
 };
 
 unsigned char buffer[max_size];
