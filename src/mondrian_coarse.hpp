@@ -243,7 +243,18 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 	//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
 	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
 	bool update_box = false;
-	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !tree_bases()[tree_id].is_paused(tree_management)){//Introduce a new parent and a new sibling
+
+	bool pause_expension = false;
+	if((tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)){
+		int const remaining_depth = node_depth(node_id, nullptr);
+		int const distance_to_root = unravel(node_id);
+		pause_expension = remaining_depth + distance_to_root + 1 > tree_bases()[tree_id].node_count_limit;
+	}
+	else{
+		pause_expension = tree_bases()[tree_id].is_paused(tree_management);
+	}
+
+	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !pause_expension){//Introduce a new parent and a new sibling
 		Utils::turn_array_into_probability(probabilities, feature_count, sum);
 		//sample features with probability proportional to e_lower[i] + e_upper[i]
 		int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
