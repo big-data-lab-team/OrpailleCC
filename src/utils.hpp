@@ -75,4 +75,8 @@ class Utils{
 	inline static double expm1(double const a){
 		return func::exp(a) - 1;
 	}
+	template<class T>
+	inline static double div_int(int const a, int const b){
+		return (a - (a % b)) / b;
+	}
 };
