@@ -536,13 +536,17 @@ int tree_depth(int const tree_id, int* tree_node_count) const{
 	TreeBase const& base = tree_bases()[tree_id];
 	root_id = base.root;
 
+	return node_depth<max_stack_size>(root_id, tree_node_count);
+}
+template<int max_stack_size=100>
+int node_depth(int const start_id, int* tree_node_count) const{
 	//Initialize an array to keep track of where we have to go at each tree level.
 	//The max depth expected is MAX_DEPTH.
 	int stack[max_stack_size];
 	for(int i = 0; i < max_stack_size; ++i)
 		stack[i] = -1;
 
-	int node_id = root_id;
+	int node_id = start_id;
 	int depth = 0, max_depth = 1;
 	
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
@@ -578,7 +582,7 @@ int tree_depth(int const tree_id, int* tree_node_count) const{
 			}
 			#ifdef DEBUG
 			else{
-				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_depth: stack[" << depth << "] == " << stack[depth] << " (should be -1, 0, or 1)" << endl;
+				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::node_depth: stack[" << depth << "] == " << stack[depth] << " (should be -1, 0, or 1)" << endl;
 			}
 			#endif
 		}
