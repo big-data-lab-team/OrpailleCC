@@ -783,7 +783,12 @@ public:
  * @param base_measure A parameter that set the initial posterior means of the parent of the root.
  * @param discount_factor The discount factor :).
  */
-CoarseMondrianForest(double const lifetime, double const base_measure, double const discount_factor, int const tree_count){
+CoarseMondrianForest(double const lifetime, double const base_measure, double const discount_factor, int const tree_count, 
+		int const tm = COBBLE_MANAGEMENT,
+		int const st = PROGRESSIVE_SAMPLING,
+		int const sy = NODE_SIZE,
+		int const sl = -1,
+		int const uc = 1): tree_management(tm), sampling_type(st), size_type(sy), size_limit(sl), use_cdm(uc) {
 #ifdef DEBUG
 	assert(tree_count >= 1 && "Must have one tree at least");
 #endif
