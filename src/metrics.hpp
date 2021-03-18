@@ -1,3 +1,4 @@
+#pragma once 
 template<bool use_ratio=false>
 class ErrorMetrics{
 	int count = 0;
