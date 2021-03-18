@@ -567,7 +567,7 @@ int node_depth(int const start_id, int* tree_node_count) const{
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
 	//*i* count the number of node deleted.
 	int i = 0;
-	while(i < node_count && node_id >= 0){
+	while(i < node_count && depth >= 0){
 		Node const& node = nodes()[node_id];	
 		if (node.is_leaf()){
 			i += 1;
