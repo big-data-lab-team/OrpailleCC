@@ -667,7 +667,15 @@ bool tree_reset(int const tree_id) {
 			return false;
 	}
 	//Reclaim the root after reset all nodes!
-	tree_bases()[tree_id].reset();
+	if(tree_management == ROBUR_MANAGEMENT)
+		if(size_limit > 0)
+			tree_bases()[i].reset(size_limit);
+		else
+			tree_bases()[i].reset(Utils::div_int<int>(node_count, tree_count));
+	else if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
+		tree_bases()[i].reset(size_limit);
+	else
+		tree_bases()[i].reset(node_count);
 	
 	if(depth != -1)
 		return false;
@@ -791,7 +799,15 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 	//Init all roots as empty 
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i)
-		tree_bases()[i].reset(node_count);
+		if(tree_management == ROBUR_MANAGEMENT)
+			if(size_limit > 0)
+				tree_bases()[i].reset(size_limit);
+			else
+				tree_bases()[i].reset(Utils::div_int<int>(node_count, tree_count));
+		else if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
+			tree_bases()[i].reset(size_limit);
+		else
+			tree_bases()[i].reset(node_count);
 	for(int i = 0; i < node_count; ++i)
 		nodes()[i].reset();
 #ifdef DEBUG
