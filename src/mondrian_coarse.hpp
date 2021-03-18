@@ -562,7 +562,7 @@ int node_depth(int const start_id, int* tree_node_count) const{
 		stack[i] = -1;
 
 	int node_id = start_id;
-	int depth = 0, max_depth = 1;
+	int depth = 0, max_depth = 0;
 	
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
 	//*i* count the number of node deleted.
