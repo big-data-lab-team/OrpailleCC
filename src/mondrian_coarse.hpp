@@ -106,6 +106,20 @@ struct MondrianNode{
 		return -1;
 	}
 };
+#define RESERVOIR_SAMPLING 0
+#define BIASED_SAMPLING 1
+#define PROGRESSIVE_SAMPLING 2
+
+#define DEPTH_SIZE 0
+#define NODE_SIZE 1
+#define TREE_COUNT_SIZE 2
+
+#define COBBLE_MANAGEMENT 0
+#define OPTIMISTIC_COBBLE_MANAGEMENT 1
+#define ROBUR_MANAGEMENT 2
+#define PHOENIX_MANAGEMENT 3
+#define PAUSING_PHOENIX_MANAGEMENT 4
+
 /**
 * MondrianForest class implements the Mondrian Forest classifier.
 * Templates:
@@ -123,24 +137,12 @@ template<class feature_type, class func, class Statistic, int feature_count, int
 class CoarseMondrianForest{
 typedef MondrianNode<feature_count, label_count> Node;
 
-#define RESERVOIR_SAMPLING 0
-#define BIASED_SAMPLING 1
-#define PROGRESSIVE_SAMPLING 2
 
-#define DEPTH_SIZE 0
-#define NODE_SIZE 1
-#define TREE_COUNT_SIZE 2
-
-#define COBBLE_MANAGEMENT 0
-#define OPTIMISTIC_COBBLE_MANAGEMENT 1
-#define ROBUR_MANAGEMENT 2
-#define PHOENIX_MANAGEMENT 3
-#define PAUSING_PHOENIX_MANAGEMENT 4
-
-int const sampling_type = PROGRESSIVE_SAMPLING;
-int const size_type = NODE_SIZE;
-int const tree_management = COBBLE_MANAGEMENT;
-int const use_cdm = 1;
+int const tree_management;
+int const sampling_type;
+int const size_type;
+int const size_limit;
+int const use_cdm;
 
 //The node structure
 struct TreeBase{
