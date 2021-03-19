@@ -773,6 +773,161 @@ int unravel(int const node_id){
 	#endif
 	return count;
 }
+#ifdef DEBUG
+void child_of(int const node_id){
+	for(int i = 0; i < node_count; ++i){
+		if(!nodes()[i].available() && nodes()[i].parent == node_id)
+			cout << "Node " << i << " has " << nodes()[i].parent << " as a parent " << (nodes()[i].parent == node_id) << endl;
+	}
+}
+int tree_dd(int const tree_id) const{
+	int const max_stack_size=100;
+	int root_id;
+	TreeBase const& base = tree_bases()[tree_id];
+	root_id = base.root;
+
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = root_id;
+	int depth = 0, max_depth = 1;
+	
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node const& node = nodes()[node_id];	
+		if (node.is_leaf()){
+			i += 1;
+			//acknowledge the depth
+			if(depth > max_depth)
+				max_depth = depth;
+
+			cout << "DD: " << node_id << " (leaf)" << endl;
+			node_id = node.parent;
+			depth -= 1;
+		}
+		else{ //Internal Node
+			if (stack[depth] == -1){ //going right
+				stack[depth] = 0;
+				depth += 1;
+				cout << "DD: " << node_id << " (right)" << endl;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				cout << "DD: " << node_id << " (left)" << endl;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				i += 1;
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				cout << "DD: " << node_id << " (up)" << endl;
+				node_id = node.parent;
+			}
+			#ifdef DEBUG
+			else{
+				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_depth: stack[" << depth << "] == " << stack[depth] << " (should be -1, 0, or 1)" << endl;
+				return max_depth+1;
+			}
+			#endif
+		}
+	}
+	return max_depth+1;
+}
+int tree_checker(int const tree_id) const{
+	int const max_stack_size=100;
+	int root_id;
+	TreeBase const& base = tree_bases()[tree_id];
+	root_id = base.root;
+
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = root_id;
+	int depth = 0, max_depth = 1;
+	bool node_visited[node_count] = {false};
+	
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node const& node = nodes()[node_id];	
+		if (node.is_leaf()){
+			i += 1;
+
+			if(node_visited[node_id] != false){
+				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_checker: leaf " << node_id << " already visited for the first time." << endl;
+				return false;
+			}
+			if(node.parent >= 0){
+				Node const& parent = nodes()[node.parent];
+				if(parent.child_left != node_id && parent.child_right != node_id){
+					cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_checker: leaf " << node_id << " isn't the child of parent " << node.parent << endl;
+					return false;
+				}
+			}
+
+			node_id = node.parent;
+			depth -= 1;
+		}
+		else{ //Internal Node
+			if (stack[depth] == -1){ //going right
+				stack[depth] = 0;
+				depth += 1;
+
+				if(node_visited[node_id] != false){
+					cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_checker: node " << node_id << " already visited for the first time." << endl;
+					return false;
+				}
+				if(node.parent >= 0){
+					Node const& parent = nodes()[node.parent];
+					if(parent.child_left != node_id && parent.child_right != node_id){
+						cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_checker: node " << node_id << " isn't the child of parent " << node.parent << endl;
+						return false;
+					}
+				}
+
+				if(nodes()[node.child_right].parent != node_id){
+					cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_checker: node " << node_id << " isn't parent of " << node.child_right << endl;
+					return false;
+				}
+				if(nodes()[node.child_left].parent != node_id){
+					cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_checker: node " << node_id << " isn't parent of " << node.child_left << endl;
+					return false;
+				}
+
+				node_visited[node_id] = true;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				i += 1;
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				node_id = node.parent;
+			}
+			else{
+				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::tree_checker: stack[" << depth << "] == " << stack[depth] << " (should be -1, 0, or 1)" << endl;
+				return false;
+			}
+		}
+	}
+	return true;
+}
+#endif
 public:
 /**
  * Constructor.
@@ -892,6 +1047,7 @@ bool train(feature_type const* features, int const label){
     #ifdef DEBUG
 	cout << "Nodes remaining:" << total_count << "," << node_available << endl;
 	cout << "Tree count:" << tree_count << endl;
+	cout << "Tree Management:" << tree_management << endl;
 	#endif
 
 	if(node_available <= 1 || (tree_management == COBBLE_MANAGEMENT && all_tree_grown)){
@@ -948,6 +1104,13 @@ bool train(feature_type const* features, int const label){
 				tree_add();
 		}
 	}
+    #ifdef DEBUG
+	for(int i = 0; i < tree_count; ++i){
+		if(!tree_checker(i)){
+			cout << "Error in CoarseMondrianForest::tree_checker for tree " << i << "." << endl;
+		}
+	}
+	#endif
 	return fully_trained;
 }
 /**
