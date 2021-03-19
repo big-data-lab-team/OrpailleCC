@@ -669,13 +669,13 @@ bool tree_reset(int const tree_id) {
 	//Reclaim the root after reset all nodes!
 	if(tree_management == ROBUR_MANAGEMENT)
 		if(size_limit > 0)
-			tree_bases()[i].reset(size_limit);
+			tree_bases()[tree_id].reset(size_limit);
 		else
-			tree_bases()[i].reset(Utils::div_int<int>(node_count, tree_count));
+			tree_bases()[tree_id].reset(Utils::div_int<int>(node_count, tree_count));
 	else if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
-		tree_bases()[i].reset(size_limit);
+		tree_bases()[tree_id].reset(size_limit);
 	else
-		tree_bases()[i].reset(node_count);
+		tree_bases()[tree_id].reset(node_count);
 	
 	if(depth != -1)
 		return false;
