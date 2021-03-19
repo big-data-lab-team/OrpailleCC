@@ -870,7 +870,7 @@ bool train(feature_type const* features, int const label){
 		int node_count = 0;
 		int depth = tree_depth(i, &node_count);
 		if(!bases[i].is_grown(tree_management))
-			all_tree_grown;
+			all_tree_grown = false;
 		#ifdef DEBUG
 		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score(tree_count-1) << endl;
 		cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
