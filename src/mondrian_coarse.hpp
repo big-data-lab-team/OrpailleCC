@@ -937,7 +937,6 @@ bool train(feature_type const* features, int const label){
 		#endif
 		tree_reset(i);
 		train_tree(features, label, i);
-		bases[i].node_count_limit = node_count;
 
 		//child_of(0);
 		//unravel(0);
