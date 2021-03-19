@@ -141,7 +141,7 @@ typedef MondrianNode<feature_count, label_count> Node;
 int const tree_management;
 int const sampling_type;
 int const size_type;
-int const size_limit;
+int size_limit;
 int const use_cdm;
 
 //The node structure
@@ -668,10 +668,7 @@ bool tree_reset(int const tree_id) {
 	}
 	//Reclaim the root after reset all nodes!
 	if(tree_management == ROBUR_MANAGEMENT)
-		if(size_limit > 0)
-			tree_bases()[tree_id].reset(size_limit);
-		else
-			tree_bases()[tree_id].reset(Utils::div_int<int>(node_count, tree_count));
+		tree_bases()[tree_id].reset(size_limit); //The size_limit has been corrected in constructor if needed.
 	else if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
 		tree_bases()[tree_id].reset(size_limit);
 	else
@@ -804,11 +801,21 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 	//Init all roots as empty 
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i)
-		if(tree_management == ROBUR_MANAGEMENT)
+		if(tree_management == ROBUR_MANAGEMENT){
+			int limit_to_use;
 			if(size_limit > 0)
-				tree_bases()[i].reset(size_limit);
+				limit_to_use = size_limit;
 			else
-				tree_bases()[i].reset(Utils::div_int<int>(node_count, tree_count));
+				limit_to_use = Utils::div_int<int>(node_count, tree_count);
+
+			//The limit must be an odd number, so we adjust if needed.
+			//Because node are added two by two so if the number isn't odd, we may get 1 node above the limit.
+			//The number of node in a tree is always odd because there is the root which is always added alone.
+			if((limit_to_use%2) == 0) 
+				limit_to_use -= 1;
+			tree_bases()[i].reset(limit_to_use);
+			size_limit = limit_to_use;
+		}
 		else if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
 			tree_bases()[i].reset(size_limit);
 		else
