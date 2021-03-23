@@ -1108,6 +1108,7 @@ bool train(feature_type const* features, int const label){
 	for(int i = 0; i < tree_count; ++i){
 		if(!tree_checker(i)){
 			cout << "Error in CoarseMondrianForest::tree_checker for tree " << i << "." << endl;
+			exit(-1);
 		}
 	}
 	#endif
