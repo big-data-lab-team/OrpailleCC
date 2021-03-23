@@ -28,7 +28,7 @@ class Utils{
 	 */
 	static void turn_array_into_probability(double* values, int const size, double sum = -1) {
 		//Compute the sum unless sum is already computed
-		if(sum == -1){
+		if(sum < 0){
 			sum = 0;
 			for(int i = 0; i < size; ++i)
 				sum += values[i];
