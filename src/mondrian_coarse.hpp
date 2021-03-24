@@ -1121,8 +1121,10 @@ bool train(feature_type const* features, int const label){
 		if(sampling_type == PROGRESSIVE_SAMPLING){
 			double const space_for_trees = (static_cast<double>(node_available) / average_tree_size()) - 2;
 			double const probability = space_for_trees > 0 ? space_for_trees / (space_for_trees+1) : 0;
-			if(func::rand_uniform() < probability)
+			if(func::rand_uniform() < probability){
 				tree_add();
+				train_tree(features, label, tree_count-1);
+			}
 		}
 	}
     #ifdef DEBUG
