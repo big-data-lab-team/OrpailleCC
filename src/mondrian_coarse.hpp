@@ -1034,7 +1034,28 @@ bool train(feature_type const* features, int const label){
 		if(!bases[i].is_grown(tree_management))
 			all_tree_grown = false;
 		#ifdef DEBUG
-		cout << "Score:" << total_count << "," << i << "," << bases[i].statistics.score(tree_count-1) << endl;
+		double score_debug;
+		if(use_cdm){
+			if(pcdm <= 0)
+				score_debug = bases[i].statistics.score(false);
+			else
+				score_debug = bases[i].statistics.score(true);
+		}
+		else{
+
+			if(bases[i].statistics.ratio())
+				score_debug = bases[i].statistics.score(false, bases[i].size);
+			else
+			{
+				const std::type_info& ti1 = typeid(Statistic);
+				const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
+				if(ti1.hash_code() == ti2.hash_code()) //If RS
+					score_debug = bases[i].statistics.score(false, tree_count-1);
+				else
+					score_debug = bases[i].statistics.score(false);
+			}
+		}
+		cout << "Score:" << total_count << "," << i << "," << score_debug << endl;
 		cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
 		#endif
 		if(size_type == DEPTH_SIZE){
