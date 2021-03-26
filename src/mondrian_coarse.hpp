@@ -742,6 +742,7 @@ bool tree_add(void){
 	tree_bases()[tree_count-1].reset();
 	return true;
 }
+template<bool verbose=false>
 int unravel(int const node_id){
 
 	if(node_id >= node_count){
@@ -754,21 +755,24 @@ int unravel(int const node_id){
 	int count = 0;
 	while(nodes()[cur].parent != -1){
  		#ifdef DEBUG
-		cout << "Unravelling " << cur << endl;
+		if(verbose)
+			cout << "Unravelling " << cur << endl;
 		#endif
 		cur = nodes()[cur].parent;
 		++count;
 	}
 	#ifdef DEBUG
-	cout << "Root: " << cur << endl;
+	if(verbose)
+		cout << "Root: " << cur << endl;
 	int tree_id = -1;
 	for(int i = 0; i < tree_count; ++i){
 		if(tree_bases()[i].root == cur){
-			cout << "Root of " << i << endl;
+			if(verbose)
+				cout << "Root of " << i << endl;
 			tree_id = i;
 		}
 	}
-	if(tree_id == -1)
+	if(verbose && tree_id == -1)
 		cout << "Root of none of the " << tree_count << " trees.";
 	#endif
 	return count;
