@@ -185,6 +185,7 @@ int node_count = 0;
 int node_available = 0;
 //The number of trees
 int tree_count = 0;	
+int maximum_tree_count = 0;
 double pcdm = 0;
 double pcdm_upper_bound = 60;
 double pcdm_lower_bound = 55;
@@ -957,6 +958,7 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 	int const remaining_memory = max_size - statistics_memory;
 	this->node_count = (remaining_memory - (remaining_memory%sizeof(Node))) / sizeof(Node);
 	this->node_available = node_count;
+	this->maximum_tree_count = (node_count - node_count%7)/7;
 	//Init all roots as empty 
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i)
@@ -1122,7 +1124,7 @@ bool train(feature_type const* features, int const label){
 		//child_of(0);
 		//unravel(0);
 		//tree_dd(0);
-		if(sampling_type == PROGRESSIVE_SAMPLING){
+		if(sampling_type == PROGRESSIVE_SAMPLING && tree_count < maximum_tree_count){
 			double const space_for_trees = (static_cast<double>(node_available) / average_tree_size()) - 2;
 			double const probability = space_for_trees > 0 ? space_for_trees / (space_for_trees+1) : 0;
 			if(func::rand_uniform() < probability){
