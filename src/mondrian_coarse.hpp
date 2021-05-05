@@ -148,6 +148,8 @@ int const sampling_type;
 int const size_type;
 int size_limit;
 int const use_cdm;
+int const dont_delete;
+int const ignore_deleted_tree;
 
 //The node structure
 struct TreeBase{
@@ -185,6 +187,8 @@ unsigned char buffer[max_size];
 #ifdef DEBUG
 unsigned int total_count = 0;
 #endif
+int last_tree_deleted = -1;
+int node_usage_on_ltd = 0;
 //The number of nodes
 int node_count = 0;
 int node_available = 0;
@@ -950,7 +954,9 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 		int const st = PROGRESSIVE_SAMPLING,
 		int const sy = NODE_SIZE,
 		int const sl = -1,
-		int const uc = 1): tree_management(tm), sampling_type(st), size_type(sy), size_limit(sl), use_cdm(uc) {
+		int const uc = 1,
+		int const dd = 0,
+		int const idt = 0): tree_management(tm), sampling_type(st), size_type(sy), size_limit(sl), use_cdm(uc), ignore_deleted_tree(idt), dont_delete(dd) {
 #ifdef DEBUG
 	assert(tree_count >= 1 && "Must have one tree at least");
 #endif
