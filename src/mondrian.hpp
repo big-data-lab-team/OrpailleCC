@@ -144,6 +144,9 @@ class MondrianForest{
 			Utils::turn_array_into_probability(probabilities, feature_count, sum);
 			//sample features with probability proportional to e_lower[i] + e_upper[i]
 			int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+			if(dimension >= feature_count || dimension < 0){
+				dimension = static_cast<int>(func::rand_uniform() * static_cast<double>(feature_count));
+			}
 
 			//Select the bound to choose the split from
 			double lower_value, upper_value;
