@@ -1088,9 +1088,21 @@ bool train(feature_type const* features, int const label){
 	cout << "Tree Management:" << tree_management << endl;
 	#endif
 
-	if(node_available <= 1 || (tree_management == COBBLE_MANAGEMENT && all_tree_grown)){
+	if((node_available <= 1 || (tree_management == COBBLE_MANAGEMENT && all_tree_grown)) && dont_delete == DO_DELETE){
 		double scores[tree_count];
 		double sum = 0;
+		#ifdef DEBUG
+		for(int i = 0; i < node_count; ++i){
+			Node& node = nodes()[i];
+			if(node.is_leaf()){
+				int sum = 0;
+				for(int l = 0; l < label_count; ++l)
+					sum += node.counters[l];
+				//if(sum > 0)
+					//cout << "Leafy:" << total_count << "," << i << "," << sum << endl;
+			}
+		}
+		#endif
 		for(int i = 0; i < tree_count; ++i){
 			if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
 				bases[i].node_count_limit = 0;
@@ -1131,9 +1143,11 @@ bool train(feature_type const* features, int const label){
 		#endif
 		tree_reset(i);
 		train_tree(features, label, i);
+		last_tree_deleted = i;
+		node_usage_on_ltd = node_available;
 
 		//child_of(0);
-		//unravel(0);
+		//unravel<true>(0);
 		//tree_dd(0);
 		if(sampling_type == PROGRESSIVE_SAMPLING && tree_count < maximum_tree_count){
 			double const space_for_trees = (static_cast<double>(node_available) / average_tree_size()) - 2;
@@ -1165,18 +1179,27 @@ int predict(feature_type const* features, double* scores = nullptr){
 
 	//The posterior mean of the forest will be the average posterior means over all trees
 	//We start by computing the sum
+	double tree_used = 0;
 	double sum_posterior_mean[label_count] = {0};
 	for(int i = 0; i < tree_count; ++i){
 		double posterior_mean[label_count];
+		if(ignore_deleted_tree == IGNORE_FULL && i == last_tree_deleted)
+			continue;
 		//Get the  posterior means of the leaf of the data point in tree *i*
 		predict_tree(features, i, posterior_mean);
+		if(ignore_deleted_tree == IGNORE_WEIGHT && i == last_tree_deleted){
+			double weight = (static_cast<double>(node_usage_on_ltd) - static_cast<double>(node_available)) / static_cast<double>(node_usage_on_ltd);
+			tree_used += weight;
+		}
+		else
+			tree_used += 1;
 		//Update the sum of posterior means
 		for(int k = 0; k < label_count; ++k)
 			sum_posterior_mean[k] += posterior_mean[k];
 	}
 	//Then we divide by the number trees.
 	for(int k = 0; k < label_count; ++k)
-		sum_posterior_mean[k] /= static_cast<double>(tree_count);
+		sum_posterior_mean[k] /= tree_used;
 
 	//Finally, we look for the best label
 	return Utils::index_max(sum_posterior_mean, label_count);
