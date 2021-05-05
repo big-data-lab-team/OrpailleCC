@@ -26,7 +26,7 @@ class Utils{
 	 * @param size The size of *values*.
 	 * @param sum The sum of the array. If sum equals -1, the sum is computed.
 	 */
-	static void turn_array_into_probability(double* values, int const size, int sum = -1) {
+	static void turn_array_into_probability(double* values, int const size, double sum = -1) {
 		//Compute the sum unless sum is already computed
 		if(sum == -1){
 			sum = 0;
