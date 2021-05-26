@@ -1370,5 +1370,36 @@ int predict(feature_type const* features, double* scores = nullptr, int tree_to_
 	//Finally, we look for the best label
 	return Utils::index_max(sum_posterior_mean, label_count);
 }
+int predict_pre_leaf(feature_type const* features, double* scores = nullptr){
+	//Update internal count
+	update_posterior_count();
+
+	//The posterior mean of the forest will be the average posterior means over all trees
+	//We start by computing the sum
+	double tree_used = 0;
+	double sum_posterior_mean[label_count] = {0};
+	for(int i = 0; i < tree_count; ++i){
+		double posterior_mean[label_count];
+		if(ignore_deleted_tree == IGNORE_FULL && i == last_tree_deleted)
+			continue;
+		//Get the  posterior means of the leaf of the data point in tree *i*
+		predict_tree_pre_leaf(features, i, posterior_mean);
+		if(ignore_deleted_tree == IGNORE_WEIGHT && i == last_tree_deleted){
+			double weight = (static_cast<double>(node_usage_on_ltd) - static_cast<double>(node_available)) / static_cast<double>(node_usage_on_ltd);
+			tree_used += weight;
+		}
+		else
+			tree_used += 1;
+		//Update the sum of posterior means
+		for(int k = 0; k < label_count; ++k)
+			sum_posterior_mean[k] += posterior_mean[k];
+	}
+	//Then we divide by the number trees.
+	for(int k = 0; k < label_count; ++k)
+		sum_posterior_mean[k] /= tree_used;
+
+	//Finally, we look for the best label
+	return Utils::index_max(sum_posterior_mean, label_count);
+}
 };
 
