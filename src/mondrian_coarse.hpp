@@ -516,6 +516,70 @@ void predict_tree(feature_type const* features, int const tree_id, double* poste
 			node_id = current_node.child_right;
 	}
 }
+void predict_tree_pre_leaf(feature_type const* features, int const tree_id, double* posterior_means) const{
+	int node_id = tree_bases()[tree_id].root;
+	for(int i = 0; i < label_count; ++i)
+		posterior_means[i] = base_measure;
+
+	double pp_sum = 0, pp_mul = 1;
+	double probability_of_branching;
+	double probability_not_separated_yet = 1;
+	double parent_tau = 0;
+
+	double smoothed_posterior_means[label_count] = {0};
+
+	//Find the corresponding leaf for the data point
+	while(node_id >= 0 && node_id < node_count) {
+		Node const& current_node = nodes()[node_id];
+		
+		double const delta_tau = current_node.tau - parent_tau;
+		double eta = 0;
+		for(int i = 0; i < feature_count; ++i)
+			eta += Utils::max(features[i] - current_node.bound_upper[i], 0.0) + Utils::max(current_node.bound_lower[i] - features[i], 0.0);
+
+		probability_of_branching = 1 - func::exp(-delta_tau * eta);
+
+		if(probability_of_branching > 0){
+			double const new_node_discount = (eta / (eta + discount_factor)) *
+											-Utils::expm1<func>(-(eta + discount_factor) * delta_tau) / -Utils::expm1<func>(-(eta * delta_tau));
+			double c[label_count];
+			double c_sum = 0;
+			//We need the sum of *c*, so we need two loops
+			for(int l = 0; l < label_count; ++l){
+				c[l] = Utils::min(current_node.counters[l], 1);
+				c_sum += c[l];
+			}
+
+			for(int l = 0; l < label_count; ++l){
+				//posterior_means of the parent of current_node
+				double const posterior_mean = (1/c_sum) * (c[l] - new_node_discount * c[l] + c_sum * posterior_means[l]); 
+				//Note that *posterior_mean* is the value for the hypothetical parent
+				smoothed_posterior_means[l] += probability_not_separated_yet * probability_of_branching * posterior_mean;
+			}
+		}
+
+		//NOTE: *posterior_means* cannot be update before we need the parent value above
+		compute_posterior_mean(current_node, posterior_means);
+
+		//If we reach a leaf, and *posterior_means* will be set to the value for this leaf.
+		if(current_node.is_leaf()){
+			for(int l = 0; l < label_count; ++l)
+				posterior_means[l] = smoothed_posterior_means[l] + probability_not_separated_yet * (1 - probability_of_branching) * posterior_means[l];
+			break;
+		}
+		probability_not_separated_yet *= (1 - probability_of_branching);
+
+		//Otherwise, the child is picked based on the split of the node
+		Node const& cright = nodes()[current_node.child_right];
+		Node const& cleft = nodes()[current_node.child_left];
+		if(cright.is_leaf() && cleft.is_leaf())
+			break;
+		if(features[current_node.split_dimension] <= current_node.split_value)
+			node_id = current_node.child_left;
+		else
+			node_id = current_node.child_right;
+	}
+}
 /**
  * Update the label counters of an internal node.
  * It is a recursive function so if apply to the root, it will apply to an entire tree.
