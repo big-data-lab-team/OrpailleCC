@@ -821,6 +821,30 @@ bool tree_add(void){
 	tree_bases()[tree_count-1].reset();
 	return true;
 }
+bool tree_delete(int const tree_id){
+	tree_reset(tree_id);
+	//From here, the tree *tree_id* should only have the root active.
+	
+	int const index_tree_base = max_size - tree_count * sizeof(TreeBase);
+	int const new_index_tree_base = index_tree_base + sizeof(TreeBase);
+	int const index_last_node = node_count * sizeof(Node);
+
+
+	//int const root_id = tree_bases()[tree_id].root;
+	//Node& root = nodes()[root_id];
+	//root.reset();
+
+	TreeBase* bases = tree_bases();
+	for(int tid = tree_id; tid > 0; --tid){
+		bases[tid] = bases[tid-1];
+	}
+	int const freed_byte = new_index_tree_base - index_last_node;
+	int const freed_node = (freed_byte - (freed_byte%sizeof(Node)))/sizeof(Node);
+	node_count += freed_node;
+	tree_count -= 1;
+
+	return true;
+}
 template<bool verbose=false>
 int unravel(int const node_id){
 
