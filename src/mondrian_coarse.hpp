@@ -1337,7 +1337,9 @@ bool train(feature_type const* features, int const label){
  * Return the most likely label.
  * @param features The features of the data point.
  */
-int predict(feature_type const* features, double* scores = nullptr){
+int predict(feature_type const* features, double* scores = nullptr, int tree_to_use = -1){
+	if(tree_to_use < 0)
+		tree_to_use = tree_count;
 	//Update internal count
 	update_posterior_count();
 
@@ -1345,7 +1347,7 @@ int predict(feature_type const* features, double* scores = nullptr){
 	//We start by computing the sum
 	double tree_used = 0;
 	double sum_posterior_mean[label_count] = {0};
-	for(int i = 0; i < tree_count; ++i){
+	for(int i = 0; i < tree_to_use; ++i){
 		double posterior_mean[label_count];
 		if(ignore_deleted_tree == IGNORE_FULL && i == last_tree_deleted)
 			continue;
