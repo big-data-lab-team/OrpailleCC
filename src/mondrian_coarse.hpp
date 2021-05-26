@@ -30,6 +30,11 @@ struct MondrianNode{
 	MondrianNode(){
 		reset();
 	}
+	void chop(void){
+		child_left = child_right = EMPTY_NODE;
+		split_dimension = EMPTY_NODE;
+		split_value = 0;
+	}
 	void reset(void){
 		for(int i = 0; i < label_count; ++i)
 			counters[i] = 0;
