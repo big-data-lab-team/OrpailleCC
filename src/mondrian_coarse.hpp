@@ -845,6 +845,77 @@ bool tree_delete(int const tree_id){
 
 	return true;
 }
+template<int max_stack_size=100>
+bool tree_chop(int const tree_id) {
+	TreeBase const& base = tree_bases()[tree_id];
+	int const root_id = base.root;
+
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	//Start at the root, then dive inside the tree
+	int node_id = root_id;
+	int depth = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];	
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //going right
+				Node &cright = nodes()[node.child_right];
+				Node &cleft = nodes()[node.child_left];
+				if(cright.is_leaf() && cleft.is_leaf()){
+					//TODO chop chop
+					cright.reset();
+					cleft.reset();
+					node.chop();
+					node_available += 2;
+					//TODO then go up
+					node_id = node.parent;
+					depth -= 1;
+				}
+				else{
+					stack[depth] = 0;
+					depth += 1;
+					node_id = node.child_right;
+				}
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				node_id = node.parent;
+			}
+		}
+		else{
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return false;
+	}
+	if(depth != -1)
+		return false;
+	return true;
+}
+bool trees_chop(){
+	bool ret = true;
+	for(int i = 0; i < tree_count; ++i)
+		ret = ret & tree_chop(i);
+	return ret;
+}
+
 template<bool verbose=false>
 int unravel(int const node_id){
 
