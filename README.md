@@ -332,6 +332,52 @@ int main() {
 }
 ```
 
+### Hoeffding Tree
+The Hoeffding Tree \[6] example.
+```cpp
+#include <cmath>
+#include "hoeffding_tree.hpp"
+
+class functions{
+	public:
+	static double log(double const x){
+		return std::log(x);
+	}
+	static double log2(double const x){
+		return std::log2(x);
+	}
+	static double sqrt(double const x){
+		return std::sqrt(x);
+	}
+	static bool isnan(double const x){
+		return std::isnan(x);
+	}
+};
+
+int main(int argc, char** argv){
+
+	int const features_size[2] = {3, 2};
+
+	//Create a Hoefding tree classifier where features are integer.
+	//The datapoint have 2 features and 2 labels.
+	//The memory buffer is set to 10k bytes.
+	//Set the probability of error to 0.99
+	//*features_size* says that the first feature can take 3 values and the second features can take 2 values.
+	HoeffdingTree<int, 2, 2, 10000, functions> ht(0.99, features_size);
+
+	int features1[2] = {2, 0};
+	int features2[2] = {2, 1};
+	int features3[2] = {0, 1};
+
+	//Train the tree
+	ht.train(features1, 0);
+	ht.train(features2, 1);
+	ht.train(features3, 0);
+
+	//Make a prediction
+	int prediction = ht.predict(features3);
+}
+```
 ## How can I help?
 - Report issues and seek support in the Issues tab.
 - Write new examples or improve existing examples and share them with a pull request. 
@@ -346,3 +392,4 @@ int main() {
 -  \[3] Tennant, Mark and Stahl, Frederic and Rana, Omer and Gomes, Joao Bartolo (2017), "Scalable real-time classification of data streams with concept drift", Future Generation Computer Systems, pages 187--199
 -  \[4] Vitter, Jeffrey S (1985), "Random sampling with a reservoir", Association for Computing Machinery Transactions on Mathematical Software (TOMS), pages 37--57
 -  \[5] Burton H. Bloom (1970), "Space/Time Trade-offs in Hash Coding with Allowable Errors", Communications of the Association for Computing Machinery
+-  \[6] Domingos, P.; Hulten, G. (2000), "Mining High-Speed Data Streams". In Proceeding of the 6th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, Boston, MA, USA, doi:10.1145/347090.347107
