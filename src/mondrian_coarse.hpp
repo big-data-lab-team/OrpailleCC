@@ -1,6 +1,8 @@
 #include "utils.hpp"
 #include "metrics.hpp"
 #include <typeinfo>
+#include <iostream>
+using namespace std;
 #ifdef DEBUG
 #include <iostream>
 using namespace std;
@@ -2859,14 +2861,20 @@ public:
  * @param base_measure A parameter that set the initial posterior means of the parent of the root.
  * @param discount_factor The discount factor :).
  */
-CoarseMondrianForest(double const lifetime, double const base_measure, double const discount_factor, int const tree_count, 
+CoarseMondrianForest(double const lifetime, double const base_measure, double const discount_factor, int const tree_count,
 		int const tm = COBBLE_MANAGEMENT,
-		int const st = PROGRESSIVE_SAMPLING,
-		int const sy = NODE_SIZE,
+		int const st = NODE_SIZE,
 		int const sl = -1,
-		int const uc = 1,
 		int const dd = 0,
-		int const idt = 0): tree_management(tm), sampling_type(st), size_type(sy), size_limit(sl), use_cdm(uc), ignore_deleted_tree(idt), dont_delete(dd) {
+		bool const pn = false,
+		int const fed = 0,
+		int const fes = 0,
+		double const tf = 1.0,
+		bool const fdt = true,
+		bool const ro = true,
+		double const fep = 1.0,
+		double const fc = 1.0,
+		int const sh = 0): tree_management(tm), size_type(st), size_limit(sl), dont_delete(dd), print_nodes(pn), fe_distribution(fed), fe_split_trigger(fes), tau_factor(tf), generate_full_point(fdt), reset_once(ro), fe_parameter(fep), fading_count(fc), split_helper(sh) {
 #ifdef DEBUG
 	assert(tree_count >= 1 && "Must have one tree at least");
 #endif
@@ -2880,7 +2888,7 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 	this->node_count = (remaining_memory - (remaining_memory%sizeof(Node))) / sizeof(Node);
 	this->node_available = node_count;
 	this->maximum_tree_count = (node_count - node_count%7)/7;
-	//Init all roots as empty 
+	//Init all roots as empty
 	TreeBase* bases = tree_bases();
 	for(int i = 0; i < tree_count; ++i)
 		if(tree_management == ROBUR_MANAGEMENT){
@@ -2893,7 +2901,7 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 			//The limit must be an odd number, so we adjust if needed.
 			//Because node are added two by two so if the number isn't odd, we may get 1 node above the limit.
 			//The number of node in a tree is always odd because there is the root which is always added alone.
-			if((limit_to_use%2) == 0) 
+			if((limit_to_use%2) == 0)
 				limit_to_use -= 1;
 			tree_bases()[i].reset(limit_to_use);
 			size_limit = limit_to_use;
@@ -2915,6 +2923,7 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 	assert(node_count >= tree_count && "Not enough memory to have one node per tree");
 #endif
 }
+
 /**
  * Train all trees of the forest with a new data point.
  * Return false if a tree has failed to be trained.
@@ -2925,34 +2934,30 @@ bool train(feature_type const* features, int const label){
 	bool fully_trained = true;
 
 	TreeBase* base = tree_bases();
-	double c = 0;
-	for(int tree_id = 0; tree_id < tree_count; ++tree_id ){
-		double posterior_means[label_count] = {0};
-		predict_tree(features, tree_id, posterior_means);
-		int const prediction = Utils::index_max(posterior_means, label_count);
-		base[tree_id].statistics.update(label, prediction);
-		if(label == prediction)
-			c += 1;
-	}
 
-	c = c / static_cast<double>(tree_count);
-	if(c < pcdm_lower_bound)
-		pcdm = -1 + pcdm * pcdm_fading_factor;
-	else if(c > pcdm_upper_bound)
-		pcdm = 1 + pcdm * pcdm_fading_factor;
-	else
-		pcdm *= pcdm_fading_factor;
+	if(print_nodes){
+		scory(features, label);
+	}
+	for(int i = 0; i < feature_count; ++i)
+		sum_features[i] = sum_features[i]*fading_count + features[i];
+	count_points = count_points*fading_count + 1;
+	int tree_order[tree_count];
+	for(int i = 0; i < tree_count; ++i)
+		//tree_order[i] = (total_count+i)%tree_count;
+		tree_order[i] = i;
 
 	for(int i = 0; i < tree_count; ++i){
-		bool has_trained = train_tree(features, label, i);
+		bool has_trained = train_tree(features, label, tree_order[i]);
 		if(!has_trained)
 			fully_trained = false;
 	}
+
+	//otter(features, label);
     #ifdef DEBUG
 	if(!fully_trained)
 		cout << "[WARNING] Not fully trained. (" << __FILE__ << ":" << __LINE__ << ")" << endl;
-	total_count += 1;
     #endif
+	total_count += 1;
 	TreeBase* bases = tree_bases();
 	bool all_tree_grown = true;
 	for(int i = 0; i < tree_count; ++i){
@@ -2962,28 +2967,20 @@ bool train(feature_type const* features, int const label){
 			all_tree_grown = false;
 		#ifdef DEBUG
 		double score_debug;
-		if(use_cdm){
-			if(pcdm <= 0)
+		if(bases[i].statistics.ratio()){
+			score_debug = bases[i].statistics.score(false, bases[i].size);
+		}
+		else {
+			const std::type_info& ti1 = typeid(Statistic);
+			const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
+			if(ti1.hash_code() == ti2.hash_code()) //If RS
+				score_debug = bases[i].statistics.score(false, tree_count-1);
+			else
 				score_debug = bases[i].statistics.score(false);
-			else
-				score_debug = bases[i].statistics.score(true);
 		}
-		else{
-
-			if(bases[i].statistics.ratio())
-				score_debug = bases[i].statistics.score(false, bases[i].size);
-			else
-			{
-				const std::type_info& ti1 = typeid(Statistic);
-				const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
-				if(ti1.hash_code() == ti2.hash_code()) //If RS
-					score_debug = bases[i].statistics.score(false, tree_count-1);
-				else
-					score_debug = bases[i].statistics.score(false);
-			}
-		}
-		cout << "Score:" << total_count << "," << i << "," << score_debug << endl;
-		cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
+		//cout << "Score:" << total_count << "," << i << "," << score_debug << endl;
+		//if(total_count%50 == 0 && total_count > 0)
+			//cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
 		#endif
 		if(size_type == DEPTH_SIZE){
 			bases[i].size = depth;
@@ -2997,77 +2994,157 @@ bool train(feature_type const* features, int const label){
 	cout << "Tree count:" << tree_count << endl;
 	cout << "Tree Management:" << tree_management << endl;
 	#endif
+	if(print_nodes && ((total_count > 0 && total_count <= 500) || (total_count > 0 && total_count%5 == 0))){
+		printy();
+	}
+	if(node_available <= 1){
+		if(false && total_count > 0 && total_count%500 == 0 && tree_count < 5){
+			int const index_tree_base = max_size - tree_count * sizeof(TreeBase);
+			int const new_index_tree_base = index_tree_base - sizeof(TreeBase);
+			int const index_last_node = node_count * sizeof(Node);
+			int const space_to_free = index_last_node - new_index_tree_base;
+			int const number_of_node_to_move = space_to_free < 0 ? 0 : (space_to_free - space_to_free%sizeof(Node)) / sizeof(Node) + ((space_to_free%sizeof(Node)) > 0);
 
-	if((node_available <= 1 || (tree_management == COBBLE_MANAGEMENT && all_tree_grown)) && dont_delete == DO_DELETE){
-		double scores[tree_count];
-		double sum = 0;
-		#ifdef DEBUG
-		for(int i = 0; i < node_count; ++i){
-			Node& node = nodes()[i];
-			if(node.is_leaf()){
-				int sum = 0;
-				for(int l = 0; l < label_count; ++l)
-					sum += node.counters[l];
-				//if(sum > 0)
-					//cout << "Leafy:" << total_count << "," << i << "," << sum << endl;
-			}
-		}
-		#endif
-		for(int i = 0; i < tree_count; ++i){
-			if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
-				bases[i].node_count_limit = 0;
-			if(use_cdm){
-				if(pcdm <= 0)
-					scores[i] = bases[i].statistics.score(false);
-				else
-					scores[i] = bases[i].statistics.score(true);
-			}
-			else{
-
-				if(bases[i].statistics.ratio())
-					scores[i] = bases[i].statistics.score(false, bases[i].size);
-				else
-				{
-					const std::type_info& ti1 = typeid(Statistic);
-					const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
-					if(ti1.hash_code() == ti2.hash_code()) //If RS
-						scores[i] = bases[i].statistics.score(false, tree_count-1);
-					else
-						scores[i] = bases[i].statistics.score(false);
+			int virtual_node_count = node_count - number_of_node_to_move;
+			int virtual_node_per_tree = (virtual_node_count - (virtual_node_count%(tree_count+1)))/(tree_count+1);
+			int virtual_remaining = (virtual_node_count%(tree_count+1));
+			for(int i = 0; i < tree_count; ++i){
+				int count;
+				int depth_i = tree_depth(i, &count);
+				while(count > virtual_node_per_tree){
+					tree_chop(i, depth_i-1);
+					depth_i = tree_depth(i, &count);
 				}
 			}
-			sum += scores[i];
-		}
-		Utils::turn_array_into_probability(scores, tree_count, sum);
-
-		#ifdef DEBUG
-		cout << "Picking numbers" << endl;
-		for(int i = 0; i < tree_count; ++i){
-			cout << scores[i] << " ";
-		}
-		cout << endl;
-		#endif
-		int const i = Utils::pick_from_distribution<func>(scores, tree_count);
-		#ifdef DEBUG
-		cout << "Deleting " << i << endl;
-		#endif
-		tree_reset(i);
-		train_tree(features, label, i);
-		last_tree_deleted = i;
-		node_usage_on_ltd = node_available;
-
-		//child_of(0);
-		//unravel<true>(0);
-		//tree_dd(0);
-		if(sampling_type == PROGRESSIVE_SAMPLING && tree_count < maximum_tree_count){
-			double const space_for_trees = (static_cast<double>(node_available) / average_tree_size()) - 2;
-			double const probability = space_for_trees > 0 ? space_for_trees / (space_for_trees+1) : 0;
-			if(func::rand_uniform() < probability){
+			if(node_available > 2){
 				tree_add();
-				train_tree(features, label, tree_count-1);
+				tree_bases()[tree_count-1].node_count_limit = node_available;
+			}
+			for(int i = 0; i < tree_count; ++i){
+				tree_bases()[i].node_count_limit = virtual_node_per_tree + (i < virtual_remaining);
 			}
 		}
+		if(false && dont_delete == DO_DELETE && total_count%500 == 0 && total_count > 0 && tree_count > 30){
+			int idx_smallest_contribution = 0;
+			int highest_ds = 0;
+			for(int i = 0; i < tree_count; ++i){
+				double const contribution = bases[i].sum_contribution/bases[i].count_contribution;
+				double const best_contrib = bases[idx_smallest_contribution].sum_contribution/bases[idx_smallest_contribution].count_contribution;
+
+				if(contribution < best_contrib)
+					idx_smallest_contribution = i;
+			}
+			if(tree_count > 2){
+				tree_delete(idx_smallest_contribution);
+			}
+			int node_per_trees = (node_count - (node_count%tree_count))/tree_count;
+			int remaining = (node_count%tree_count);
+			for(int i = 0; i < tree_count; ++i)
+				bases[i].node_count_limit = node_per_trees + (i < remaining);
+		}
 	}
+	//if((node_available <= 1 || ((tree_management == COBBLE_MANAGEMENT || tree_management == ROBUR_MANAGEMENT) && all_tree_grown)) && dont_delete == DO_DELETE){
+		//count_full += 1;
+		//if(count_full > 100){
+			//count_full = 0;
+			//#ifdef DEBUG
+			//cout << "Direction:" << total_count << "," << (sum_direction/count_direction) << "," << sum_direction << endl;
+			//#endif
+			//if((sum_direction/count_direction) > 0){ //Count is more important
+				////Chop to depth -1 and pause them
+				//for(int i = 0; i < tree_count; ++i){
+					//int depth_i = tree_depth(i, nullptr);
+					//bases[i].node_count_limit = 0;
+					//if(depth_i > 2)
+						//tree_chop(i, depth_i-1);
+				//}
+				//if(node_available > 2)
+					//tree_add();
+			//}
+			//else if((sum_direction/count_direction) < 0){ //Depth is more important
+
+				//int idx_smallest_contribution = 0;
+				//for(int i = 0; i < tree_count; ++i){
+					//double contribution = bases[i].sum_contribution/bases[i].count_contribution;
+					//double best_contrib = bases[idx_smallest_contribution].sum_contribution/bases[idx_smallest_contribution].count_contribution;
+
+					//#ifdef DEBUG
+					//cout << "Contribution:" << total_count << "," << i << "," << contribution << endl;
+					//#endif
+					//if(contribution < best_contrib)
+						//idx_smallest_contribution = i;
+					//bases[i].node_count_limit = node_count;
+				//}
+				//if(tree_count > 2){
+					//#ifdef DEBUG
+					//cout << "Deleting:" << total_count << "," << idx_smallest_contribution << endl;
+					//#endif
+					//tree_delete(idx_smallest_contribution);
+				//}
+			//}
+			//for(int i = 0; i < tree_count; ++i){
+				//bases[i].sum_contribution = 0;
+				//bases[i].count_contribution = 0;
+			//}
+			//sum_direction = 0;
+			//count_direction = 0;
+		//}
+		//if(1==0){
+		//double scores[tree_count];
+		//double sum = 0;
+		//#ifdef DEBUG
+		//for(int i = 0; i < node_count; ++i){
+			//Node& node = nodes()[i];
+			//if(node.is_leaf()){
+				//int sum = 0;
+				//for(int l = 0; l < label_count; ++l)
+					//sum += node.counters[l];
+				////if(sum > 0)
+					////cout << "Leafy:" << total_count << "," << i << "," << sum << endl;
+			//}
+		//}
+		//#endif
+		//for(int i = 0; i < tree_count; ++i){
+			//if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
+			//bases[i].node_count_limit = 0;
+			//if(bases[i].statistics.ratio())
+				//scores[i] = bases[i].statistics.score(false, bases[i].size);
+			//else
+			//{
+				//const std::type_info& ti1 = typeid(Statistic);
+				//const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
+				//if(ti1.hash_code() == ti2.hash_code()) //If RS
+					//scores[i] = bases[i].statistics.score(false, tree_count-1);
+				//else
+					//scores[i] = bases[i].statistics.score(false);
+			//}
+			//sum += scores[i];
+		//}
+		//Utils::turn_array_into_probability(scores, tree_count, sum);
+
+		//#ifdef DEBUG
+		//cout << "Picking numbers" << endl;
+		//for(int i = 0; i < tree_count; ++i){
+			//cout << scores[i] << " ";
+		//}
+		//cout << endl;
+		//#endif
+		//int const i = Utils::pick_from_distribution<func>(scores, tree_count);
+		//#ifdef DEBUG
+		//cout << "Deleting " << i << endl;
+		//#endif
+		//tree_reset(i);
+		//train_tree(features, label, i);
+		//last_tree_deleted = i;
+		//node_usage_on_ltd = node_available;
+
+		//}
+		//#ifdef DEBUG
+		////child_of(0);
+		////unravel<true>(0);
+		////tree_dd(0);
+		//#endif
+	//}
     #ifdef DEBUG
 	for(int i = 0; i < tree_count; ++i){
 		if(!tree_checker(i)){
@@ -3077,6 +3154,220 @@ bool train(feature_type const* features, int const label){
 	}
 	#endif
 	return fully_trained;
+}
+
+void otter(feature_type const* features, int const label){
+	double scores[tree_count][label_count];
+	double scores_pre[tree_count][label_count];
+	double full_forest_score[label_count];
+	double full_depth_score[label_count];
+	double full_score[label_count];
+	int depths[tree_count];
+	//Update internal count
+	update_posterior_count();
+
+	//Set everything to 0
+	for(int i = 0; i < tree_count; ++i)
+		for(int j = 0; j < label_count; ++j)
+			scores[i][j] = scores_pre[i][j] = 0;
+	for(int j = 0; j < label_count; ++j)
+		full_forest_score[j] = full_depth_score[j] = full_score[j] = 0;
+
+	//Compute depth
+	for(int i = 0; i < tree_count; ++i)
+		depths[i] = tree_depth(i, nullptr);
+
+	for(int i = 0; i < tree_count; ++i){
+		predict_tree(features, i, scores[i]);
+		predict_tree(features, i, scores_pre[i], depths[i]-1);
+		for(int j = 0; j < label_count; ++j){
+			full_forest_score[j] += scores_pre[i][j];
+			full_score[j] += scores[i][j];
+		}
+	}
+
+	for(int j = 0; j < label_count; ++j)
+		full_depth_score[j] = full_score[j];
+	for(int j = 0; j < label_count; ++j)
+		full_score[j] /= static_cast<double>(tree_count);
+
+	double const full_forest_eval = eval_scores(full_forest_score, label);
+	double full_depth_eval = 0;
+	double const full_eval = eval_scores(full_score, label);
+
+	//Brute force of the best subset of size tree_count-1
+	double sum_score = 0;
+	for(int i = 0; i < tree_count; ++i){
+		double tmp_score[label_count];
+		for(int j = 0; j < label_count; ++j)
+			tmp_score[j] = (full_depth_score[j] - scores[i][j]) / static_cast<double>(tree_count-1);
+
+		full_depth_eval += eval_scores(tmp_score, label);
+	}
+	full_depth_eval /= static_cast<double>(tree_count);
+
+	count_direction += 1;
+	if(full_forest_eval > full_depth_eval)
+		sum_direction += 1;
+	else
+		sum_direction -= 1;
+
+
+	#ifdef DEBUG
+	//for(int j = 0; j < label_count; ++j){
+		//for(int i = 0; i < tree_count; ++i)
+			//cout << "Otter:" << total_count << "," << i << "," << j << "," << scores[i][j] << "," << scores_pre[i][j] << ",0" << endl;
+		//cout << "Otter:" << total_count << ",-1," << j << "," << full_score[j] << "," << full_forest_score[j] << "," << full_depth_score[j] << endl;
+	//}
+	//for(int i = 0; i < tree_count; ++i)
+		//cout << "Canard:" << total_count << "," << i << "," << Utils::index_max(scores[i], label_count) << "," << label << endl;
+	//cout << "Canard:" << total_count << ",-1," << Utils::index_max(full_score, label_count) << "," << label << endl;
+	//cout << "Canard:" << total_count << ",-2," << Utils::index_max(full_depth_score, label_count) << "," << label << endl;
+	//cout << "Canard:" << total_count << ",-3," << Utils::index_max(full_forest_score, label_count) << "," << label << endl;
+    #endif
+	//Compute Contribution of each tree
+	double S[tree_count];
+	TreeBase* bases = tree_bases();
+	double const fading_factor = 0.95;
+	#ifdef DEBUG
+	if(total_count > 280){
+		cout << "Current_total:" << total_count << "," << full_eval << "," << full_forest_eval << "," << full_depth_eval << endl;
+		cout << "Current_label:" << total_count << "," << label << endl;
+		cout << "Current_score:" << total_count;
+		for(int i = 0; i < label_count; ++i)
+			cout << "," << full_score[i];
+		cout << endl;
+	}
+    #endif
+	for(int i = 0; i < tree_count; ++i){
+		double tmp_score[label_count];
+
+		for(int j = 0; j < label_count; ++j)
+			tmp_score[j] = full_score[j] - (scores[i][j] / static_cast<double>(tree_count));
+
+		double const parrot = eval_scores(tmp_score, label);
+		S[i] = parrot - full_eval;
+
+		//mettre à jours average S[i]
+		bases[i].count_contribution = bases[i].count_contribution * fading_factor + 1;
+		bases[i].sum_contribution = bases[i].sum_contribution * fading_factor + S[i];
+		double canard = bases[i].sum_contribution / bases[i].count_contribution;
+		#ifdef DEBUG
+		if(total_count > 280)
+			cout << "Current:" << total_count << "," << i << "," << canard << endl;
+		#endif
+	}
+}
+int tree_printy(int const tree_id) const{
+	TreeBase const& base = tree_bases()[tree_id];
+	int const root_id = base.root;
+
+	bool ret = tree_printy(tree_id, root_id);
+	return ret;
+}
+void node_csv(int const tree_id, int const node_id, int const depth, int const leaf, Node const& node) const{
+	cout << "Narval:" << total_count << "," << tree_id << "," << node_id << "," << depth << ","
+		<< node.parent << "," << node.child_right << "," << node.child_left << ","
+		<< node.tau << "," << node.split_dimension << "," << node.split_value << "," << leaf << "," << node.forced_extend << ",";
+	for(int i = 0; i < feature_count; ++i){
+		cout << node.bound_lower[i] << "," << node.bound_upper[i] << ",";
+	}
+	for(int i = 0; i < label_count; ++i){
+		cout << node.counters[i] << ",";
+	}
+	cout << endl;
+}
+template<int max_stack_size=100>
+void tree_printy(int const tree_id, int const start_id) const{
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = start_id;
+	int depth = 0, max_depth = 0;
+
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	int depth_id = start_id;
+	while(i < node_count && depth >= 0){
+		Node const& node = nodes()[node_id];
+		if (node.is_leaf()){
+			i += 1;
+			//acknowledge the depth
+			if(depth > max_depth){
+				max_depth = depth;
+				depth_id = node_id;
+			}
+			node_csv(tree_id, node_id, depth, 1, node);
+
+			node_id = node.parent;
+			depth -= 1;
+		}
+		else{ //Internal Node
+			if (stack[depth] == -1){ //going right
+				stack[depth] = 0;
+				node_csv(tree_id, node_id, depth, 0, node);
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				i += 1;
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				node_id = node.parent;
+			}
+			#ifdef DEBUG
+			else{
+				cout << __FILE__ << ":" << __LINE__ << " CoarseMondrianForest::node_depth: stack[" << depth << "] == " << stack[depth] << " (should be -1, 0, or 1)" << endl;
+			}
+			#endif
+		}
+	}
+}
+void printy(void) const{
+	for(int i = 0; i < tree_count; ++i)
+		tree_printy(i, tree_bases()[i].root);
+}
+void scory(feature_type const* features, int const label){
+	double scores[label_count];
+	double sum_scores[label_count];
+
+	update_posterior_count();
+	for(int i = 0; i < tree_count; ++i){
+		for(int j = 0; j < label_count; ++j)
+			scores[j] = 0;
+		predict_tree(features, i, scores);
+		int const prediction = Utils::index_max(scores, label_count);
+		cout << "Loutre:" << total_count << "," << i << "," << label << "," << prediction;
+		for(int j = 0; j < label_count; ++j)
+			cout << "," << scores[j];
+		cout << endl;
+		for(int j = 0; j < label_count; ++j)
+			sum_scores[j] = scores[j];
+	}
+	int const prediction = Utils::index_max(sum_scores, label_count);
+	cout << "Loutre:" << total_count << "," << -1 << "," << label << "," << prediction;
+	for(int j = 0; j < label_count; ++j)
+		cout << "," << sum_scores[j];
+	cout << endl;
+}
+double eval_scores(double const* score, int const label) const{
+	int idx_max = Utils::index_max(score, label_count); //Find the predicted label
+	if(idx_max == label){ //The label is the one predicted, so we get the second class
+		idx_max = 0;
+		for(int i = 1; i < label_count; ++i)
+			if(i != label && score[i] > score[idx_max])
+				idx_max = i;
+	}
+	return score[label] - score[idx_max];
 }
 /**
  * Predict the label of the data point.
@@ -3095,16 +3386,9 @@ int predict(feature_type const* features, double* scores = nullptr, int tree_to_
 	double sum_posterior_mean[label_count] = {0};
 	for(int i = 0; i < tree_to_use; ++i){
 		double posterior_mean[label_count];
-		if(ignore_deleted_tree == IGNORE_FULL && i == last_tree_deleted)
-			continue;
 		//Get the  posterior means of the leaf of the data point in tree *i*
 		predict_tree(features, i, posterior_mean);
-		if(ignore_deleted_tree == IGNORE_WEIGHT && i == last_tree_deleted){
-			double weight = (static_cast<double>(node_usage_on_ltd) - static_cast<double>(node_available)) / static_cast<double>(node_usage_on_ltd);
-			tree_used += weight;
-		}
-		else
-			tree_used += 1;
+		tree_used += 1;
 		//Update the sum of posterior means
 		for(int k = 0; k < label_count; ++k)
 			sum_posterior_mean[k] += posterior_mean[k];
@@ -3116,36 +3400,12 @@ int predict(feature_type const* features, double* scores = nullptr, int tree_to_
 	//Finally, we look for the best label
 	return Utils::index_max(sum_posterior_mean, label_count);
 }
-int predict_pre_leaf(feature_type const* features, double* scores = nullptr){
-	//Update internal count
-	update_posterior_count();
 
-	//The posterior mean of the forest will be the average posterior means over all trees
-	//We start by computing the sum
-	double tree_used = 0;
-	double sum_posterior_mean[label_count] = {0};
-	for(int i = 0; i < tree_count; ++i){
-		double posterior_mean[label_count];
-		if(ignore_deleted_tree == IGNORE_FULL && i == last_tree_deleted)
-			continue;
-		//Get the  posterior means of the leaf of the data point in tree *i*
-		predict_tree_pre_leaf(features, i, posterior_mean);
-		if(ignore_deleted_tree == IGNORE_WEIGHT && i == last_tree_deleted){
-			double weight = (static_cast<double>(node_usage_on_ltd) - static_cast<double>(node_available)) / static_cast<double>(node_usage_on_ltd);
-			tree_used += weight;
-		}
-		else
-			tree_used += 1;
-		//Update the sum of posterior means
-		for(int k = 0; k < label_count; ++k)
-			sum_posterior_mean[k] += posterior_mean[k];
-	}
-	//Then we divide by the number trees.
-	for(int k = 0; k < label_count; ++k)
-		sum_posterior_mean[k] /= tree_used;
-
-	//Finally, we look for the best label
-	return Utils::index_max(sum_posterior_mean, label_count);
+Node* get_nodes(){
+	return nodes();
 }
+TreeBase* get_bases(){
+	return tree_bases();
+}
+
 };
-
