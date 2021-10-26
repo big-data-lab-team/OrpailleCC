@@ -251,7 +251,7 @@ TreeBase const* tree_bases() const{
 	return reinterpret_cast<TreeBase const*>(buffer + max_size - tree_count * sizeof(TreeBase));
 }
 /**
- *	Return the index of an empty node. 
+ *	Return the index of an empty node.
  */
 int available_node(void) const{
 	if(node_available == 0)
@@ -268,11 +268,12 @@ int available_node(void) const{
  * @param features The features of the new data point.
  * @param label The label of the new data  point.
  */
-void extend_block(int const node_id, int const tree_id, feature_type const* features, int const label){
+//Original extend
+void extend_block0(int const node_id, int const tree_id, feature_type const* features, int const label){
 	//e_lower and e_upper are used to compute probabilities
 	feature_type e_lower[feature_count], e_upper[feature_count];
 	double probabilities[feature_count];
-	Node& node = nodes()[node_id];	
+	Node& node = nodes()[node_id];
 	int const parent_id = node.parent;
 	double const parent_tau = node.parent >= 0 ? nodes()[node.parent].tau : 0; //The tau value of the parent of the root is 0
 	//sum is used as a parameter to pick random numbers following exponential law
@@ -296,6 +297,7 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 	}
 	else{
 		pause_expension = tree_bases()[tree_id].is_paused(tree_management);
+		pause_expension = total_count >= 20 && total_count < 150;
 	}
 
 	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !pause_expension){//Introduce a new parent and a new sibling
@@ -350,7 +352,7 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 			if(parent.child_left == node_id)
 				parent.child_left = new_parent;
 			else
-				parent.child_right = new_parent; 
+				parent.child_right = new_parent;
 		}
 
 
@@ -372,16 +374,16 @@ void extend_block(int const node_id, int const tree_id, feature_type const* feat
 		//update lower bound and upper bound of this node
 		for(int i = 0; i < feature_count; ++i){
 			if(node.bound_lower[i] > features[i])
-				node.bound_lower[i] = features[i]; 
+				node.bound_lower[i] = features[i];
 			if(node.bound_upper[i] < features[i])
-				node.bound_upper[i] = features[i]; 
+				node.bound_upper[i] = features[i];
 		}
 		//if not leaf, recurse on the node that contains the data point
 		if(!node.is_leaf()){
 			if(features[node.split_dimension] <= node.split_value)
-				extend_block(node.child_left, tree_id, features, label);
+				extend_block0(node.child_left, tree_id, features, label);
 			else if(features[node.split_dimension] > node.split_value)
-				extend_block(node.child_right, tree_id, features, label);
+				extend_block0(node.child_right, tree_id, features, label);
 			//NOTE: we don't update the counters of labels here because the counting will be done when prediction is required.
 			//We can optimize that.
 		}
