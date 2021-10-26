@@ -2531,7 +2531,137 @@ bool trees_chop(){
 		ret = ret & tree_chop(i);
 	return ret;
 }
+void tree_reshape(){
+	tree_trim();
+	tree_split();
+}
+void tree_trim(){
+	for(int i = 0; i < tree_count; ++i){
+		int id = tree_trim(i);
+		if(tree_bases()[i].root != id) //Can't cut the root
+			cut_block(id, i);
+	}
+}
+template<int max_stack_size=100>
+int tree_trim(int const tree_id){
+	TreeBase const& base = tree_bases()[tree_id];
+	int const root_id = base.root;
 
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	//Start at the root, then dive inside the tree
+	int node_id = root_id;
+	int depth = 0;
+	int smallest_count = total_count, smallest_id = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+			int count = 0;
+			for(int i = 0; i < label_count; ++i)
+				count += node.counters[i];
+			if(count < smallest_count || (count == smallest_count && func::rand_uniform() < 0.5)){
+				smallest_count = count;
+				smallest_id = node_id;
+			}
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return smallest_id;
+}
+void tree_split(){
+	for(int i = 0; i < tree_count; ++i){
+		int id = tree_split(i);
+		split_leaf(id, i, false);
+	}
+}
+template<int max_stack_size=100>
+int tree_split(int const tree_id){
+	TreeBase const& base = tree_bases()[tree_id];
+	int const root_id = base.root;
+
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	//Start at the root, then dive inside the tree
+	int node_id = root_id;
+	int depth = 0;
+	int biggest_count = 0, biggest_id = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+			int count = node.forced_extend;
+			if(count > biggest_count || (count == biggest_count && func::rand_uniform() < 0.5)){
+				biggest_count = count;
+				biggest_id = node_id;
+			}
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return biggest_id;
+}
 template<bool verbose=false>
 int unravel(int const node_id){
 
