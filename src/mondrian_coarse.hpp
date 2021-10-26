@@ -2387,7 +2387,7 @@ bool tree_add(void){
 	int const index_last_node = node_count * sizeof(Node);
 
 	if(new_index_tree_base < index_last_node){ //We need to relocate nodes
-		int const space_to_free = index_last_node - new_index_tree_base;	
+		int const space_to_free = index_last_node - new_index_tree_base;
 		int const number_of_node_to_move = (space_to_free - space_to_free%sizeof(Node)) / sizeof(Node) + ((space_to_free%sizeof(Node)) > 0);
 		int const old_node_count = node_count;
 		if(2*number_of_node_to_move > node_available) //2 time because we gonna remove *number_of_node_to_move* from the pool and we need *number_of_node_to_move* additional node to relocate them.
@@ -2414,7 +2414,7 @@ bool tree_add(void){
 bool tree_delete(int const tree_id){
 	tree_reset(tree_id);
 	//From here, the tree *tree_id* should only have the root active.
-	
+
 	int const index_tree_base = max_size - tree_count * sizeof(TreeBase);
 	int const new_index_tree_base = index_tree_base + sizeof(TreeBase);
 	int const index_last_node = node_count * sizeof(Node);
