@@ -2718,12 +2718,12 @@ int tree_dd(int const tree_id) const{
 
 	int node_id = root_id;
 	int depth = 0, max_depth = 1;
-	
+
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
 	//*i* count the number of node deleted.
 	int i = 0;
 	while(i < node_count && node_id >= 0){
-		Node const& node = nodes()[node_id];	
+		Node const& node = nodes()[node_id];
 		if (node.is_leaf()){
 			i += 1;
 			//acknowledge the depth
@@ -2779,12 +2779,12 @@ int tree_checker(int const tree_id) const{
 	int node_id = root_id;
 	int depth = 0, max_depth = 1;
 	bool node_visited[node_count] = {false};
-	
+
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
 	//*i* count the number of node deleted.
 	int i = 0;
 	while(i < node_count && node_id >= 0){
-		Node const& node = nodes()[node_id];	
+		Node const& node = nodes()[node_id];
 		if (node.is_leaf()){
 			i += 1;
 
