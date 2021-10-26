@@ -2265,6 +2265,20 @@ bool tree_reset(int const tree_id) {
 	TreeBase const& base = tree_bases()[tree_id];
 	int const root_id = base.root;
 
+	bool ret = node_reset<max_stack_size>(root_id);
+	//Reclaim the root after reset all nodes!
+	if(tree_management == ROBUR_MANAGEMENT)
+		tree_bases()[tree_id].reset(size_limit); //The size_limit has been corrected in constructor if needed.
+	else if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
+		tree_bases()[tree_id].reset(size_limit);
+	else
+		tree_bases()[tree_id].reset(node_count);
+
+	return ret;
+}
+template<int max_stack_size=100>
+bool node_reset(int const start_id) {
+	int const root_id = start_id;
 	//Initialize an array to keep track of where we have to go at each tree level.
 	//The max depth expected is MAX_DEPTH.
 	int stack[max_stack_size];
@@ -2278,16 +2292,22 @@ bool tree_reset(int const tree_id) {
 	//*i* count the number of node deleted.
 	int i = 0;
 	while(i < node_count && node_id >= 0){
-		Node& node = nodes()[node_id];	
+		Node& node = nodes()[node_id];
 		if (node.is_leaf()){
+			node_available += 1;
+			i += 1;
+
+			if(node_id == root_id){
+				node.reset();
+				break;
+			}
+
 			//Get the parent before reset (root parent will be a negative number)
 			//Since the loop stops if node_id is below 0, it's fine
 			node_id = node.parent;
 			node.reset();
 
-			i += 1;
 			depth -= 1;
-			node_available += 1;
 		}
 		else{  //Internal node
 			if (stack[depth] == -1){ //going right
@@ -2301,6 +2321,13 @@ bool tree_reset(int const tree_id) {
 				node_id = node.child_left;
 			}
 			else if (stack[depth] == 1){ //Go up
+				node_available += 1;
+
+				if(node_id == root_id){
+					node.reset();
+					break;
+				}
+
 				stack[depth] = -1; //Reset to -1
 				depth -= 1;
 				i += 1;
@@ -2309,20 +2336,13 @@ bool tree_reset(int const tree_id) {
 				//Since the loop stops if node_id is below 0, it's fine
 				node_id = node.parent;
 				node.reset();
-				node_available += 1;
+
 			}
 		}
 		if(depth >= max_stack_size)
 			return false;
 	}
-	//Reclaim the root after reset all nodes!
-	if(tree_management == ROBUR_MANAGEMENT)
-		tree_bases()[tree_id].reset(size_limit); //The size_limit has been corrected in constructor if needed.
-	else if(tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)
-		tree_bases()[tree_id].reset(size_limit);
-	else
-		tree_bases()[tree_id].reset(node_count);
-	
+
 	if(depth != -1)
 		return false;
 	return true;
