@@ -2191,6 +2191,12 @@ int tree_depth(int const tree_id, int* tree_node_count) const{
 	TreeBase const& base = tree_bases()[tree_id];
 	root_id = base.root;
 
+	if(root_id < 0){
+		if(tree_node_count != nullptr)
+			*tree_node_count = 0;
+		return 0;
+	}
+
 	return node_depth<max_stack_size>(root_id, tree_node_count);
 }
 template<int max_stack_size=100>
