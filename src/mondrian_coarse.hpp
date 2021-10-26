@@ -163,12 +163,17 @@ typedef MondrianNode<feature_count, label_count> Node;
 
 
 int const tree_management;
-int const sampling_type;
 int const size_type;
 int size_limit;
-int const use_cdm;
 int const dont_delete;
-int const ignore_deleted_tree;
+bool const print_nodes;
+int const fe_distribution;
+int const fe_split_trigger;
+double const tau_factor;
+bool const generate_full_point;
+bool const reset_once;
+double const fe_parameter;
+int const split_helper;
 
 //The node structure
 struct TreeBase{
