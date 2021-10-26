@@ -24,6 +24,9 @@ struct MondrianNode{
 	double tau;
 	//The counters of each labels that reach that node.
 	int counters[label_count];
+	//Counter of element that should have been out of the box, but couldn't because of lack of memory
+	int forced_extend;
+
 	/**
 	 * Constuctor
 	 */
@@ -38,10 +41,14 @@ struct MondrianNode{
 	void reset(void){
 		for(int i = 0; i < label_count; ++i)
 			counters[i] = 0;
+		for(int i = 0; i < feature_count; ++i)
+			bound_lower[i] = bound_upper[i] = 0;
 		child_left = child_right = EMPTY_NODE;
 		split_dimension = EMPTY_NODE;
+		split_value = 0;
 		tau = EMPTY_NODE;
 		parent = EMPTY_NODE;
+		forced_extend = 0;
 	}
 	bool has_parent(void) const{
 		return parent != EMPTY_NODE;
