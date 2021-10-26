@@ -121,10 +121,6 @@ struct MondrianNode{
 #define DO_DELETE 0
 #define DONT_DELETE 1
 
-#define RESERVOIR_SAMPLING 0
-#define BIASED_SAMPLING 1
-#define PROGRESSIVE_SAMPLING 2
-
 #define DEPTH_SIZE 0
 #define NODE_SIZE 1
 
@@ -134,9 +130,20 @@ struct MondrianNode{
 #define PHOENIX_MANAGEMENT 3
 #define PAUSING_PHOENIX_MANAGEMENT 4
 
-#define IGNORE_NOT 0
-#define IGNORE_FULL 1
-#define IGNORE_WEIGHT 2
+#define FE_DISTRIBUTION_ZERO 0
+#define FE_DISTRIBUTION_SPLIT 1
+#define FE_DISTRIBUTION_PROPORTIONAL 2
+#define FE_DISTRIBUTION_DECREMENT 3
+
+#define SPLIT_TRIGGER_NONE 0
+#define SPLIT_TRIGGER_POSITIVE 1
+#define SPLIT_TRIGGER_TOTAL 2
+#define SPLIT_TRIGGER_SFE 3
+
+#define SPLIT_HELPER_NONE 0
+#define SPLIT_HELPER_AVG 1
+#define SPLIT_HELPER_WEIGHTED 2
+
 /**
 * MondrianForest class implements the Mondrian Forest classifier.
 * Templates:
