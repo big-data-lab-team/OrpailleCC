@@ -2435,8 +2435,36 @@ bool tree_delete(int const tree_id){
 
 	return true;
 }
+bool tree_behead(int const tree_id){
+	int side = rand()%2;
+	TreeBase & base = tree_bases()[tree_id];
+	int const root_id = base.root;
+	if(root_id < 0)
+		return false;
+	Node& root = nodes()[root_id];
+
+	int node_id = -1;
+	int new_root = -1;
+	if(side == 0){
+		node_id = root.child_right;
+		new_root = root.child_left;
+	}
+	else{
+		node_id = root.child_left;
+		new_root = root.child_right;
+	}
+
+	if(node_id < 0)
+		return false;
+	node_reset(node_id);
+	root.reset();
+	node_available += 1;
+	base.root = new_root;
+	nodes()[new_root].parent = -1;
+	return true;
+}
 template<int max_stack_size=100>
-bool tree_chop(int const tree_id) {
+bool tree_chop(int const tree_id, int const cutting_depth = -1) { //Chop every depth below *cutting_depth*
 	TreeBase const& base = tree_bases()[tree_id];
 	int const root_id = base.root;
 
@@ -2453,22 +2481,20 @@ bool tree_chop(int const tree_id) {
 	//*i* count the number of node deleted.
 	int i = 0;
 	while(i < node_count && node_id >= 0){
-		Node& node = nodes()[node_id];	
+		Node& node = nodes()[node_id];
 		if(!node.is_leaf()){  //Internal node
-			if (stack[depth] == -1){ //going right
-				Node &cright = nodes()[node.child_right];
-				Node &cleft = nodes()[node.child_left];
-				if(cright.is_leaf() && cleft.is_leaf()){
-					//TODO chop chop
-					cright.reset();
-					cleft.reset();
+			if (stack[depth] == -1){ //Go right or cut
+				if((depth+1) == cutting_depth){
+					//Chop chop
+					node_reset(node.child_right);
+					node_reset(node.child_left);
 					node.chop();
-					node_available += 2;
-					//TODO then go up
+
+					//Go up
 					node_id = node.parent;
 					depth -= 1;
 				}
-				else{
+				else{ //Go right
 					stack[depth] = 0;
 					depth += 1;
 					node_id = node.child_right;
@@ -2486,7 +2512,7 @@ bool tree_chop(int const tree_id) {
 				node_id = node.parent;
 			}
 		}
-		else{
+		else{ //Leaf
 			stack[depth] = -1; //Reset to -1
 			depth -= 1;
 			i += 1;
