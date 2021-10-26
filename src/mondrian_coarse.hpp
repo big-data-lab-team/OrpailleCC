@@ -176,11 +176,14 @@ double const fe_parameter;
 int const split_helper;
 
 //The node structure
+	public:
 struct TreeBase{
 	static const int EMPTY_ROOT = -1;
 	int node_count_limit = 0;
 	int size = 0;
 	int root;
+	double sum_contribution = 0;
+	double count_contribution = 0;
 	Statistic statistics;
 	bool is_empty(void) const{
 		return root == EMPTY_ROOT;
@@ -189,6 +192,8 @@ struct TreeBase{
 		root = EMPTY_ROOT;
 		node_count_limit = node_limit;
 		statistics.reset();
+		sum_contribution = 0;
+		count_contribution = 0;
 	}
 	bool is_paused(int const tree_management = 0) const{
 		if(tree_management == ROBUR_MANAGEMENT || tree_management == PAUSING_PHOENIX_MANAGEMENT)
@@ -205,6 +210,7 @@ struct TreeBase{
 		return is_paused(tree_management);
 	}
 };
+private:
 
 unsigned char buffer[max_size];
 
