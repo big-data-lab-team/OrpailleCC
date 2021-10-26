@@ -393,6 +393,1577 @@ void extend_block0(int const node_id, int const tree_id, feature_type const* fea
 		}
 	}
 }
+//Update if not split
+void extend_block2(int const node_id, int const tree_id, feature_type const* features, int const label){
+	//e_lower and e_upper are used to compute probabilities
+	feature_type e_lower[feature_count], e_upper[feature_count];
+	double probabilities[feature_count];
+	Node& node = nodes()[node_id];
+	int const parent_id = node.parent;
+	double const parent_tau = node.parent >= 0 ? nodes()[node.parent].tau : 0; //The tau value of the parent of the root is 0
+	//sum is used as a parameter to pick random numbers following exponential law
+	feature_type sum = 0;
+	//compute e_lower, e_upper and sum
+	for(int i = 0; i < feature_count; ++i){
+		e_lower[i] = node.bound_lower[i] - features[i] > 0 ? node.bound_lower[i] - features[i] : 0;
+		e_upper[i] = features[i] - node.bound_upper[i] > 0 ? features[i] - node.bound_upper[i] : 0;
+		probabilities[i] = e_lower[i] + e_upper[i];
+		sum += e_lower[i] + e_upper[i];
+	}
+	//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
+	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
+	bool update_box = false;
+
+	bool pause_expension = false;
+	if((tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)){
+		int const remaining_depth = node_depth(node_id, nullptr);
+		int const distance_to_root = unravel(node_id);
+		pause_expension = remaining_depth + distance_to_root + 1 > tree_bases()[tree_id].node_count_limit;
+	}
+	else{
+		pause_expension = tree_bases()[tree_id].is_paused(tree_management);
+	}
+
+	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !pause_expension){//Introduce a new parent and a new sibling
+		Utils::turn_array_into_probability(probabilities, feature_count, sum);
+		//sample features with probability proportional to e_lower[i] + e_upper[i]
+		int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+
+		//Select the bound to choose the split from
+		double lower_value, upper_value;
+		if(features[dimension] > node.bound_upper[dimension]){
+			lower_value = node.bound_upper[dimension];
+			upper_value = features[dimension];
+		}
+		else if(features[dimension] < node.bound_lower[dimension]){
+			lower_value = features[dimension];
+			upper_value = node.bound_lower[dimension];
+		}
+
+		//sample the split between [lower_value, upper_value]
+		double const split_value = func::rand_uniform()*(upper_value - lower_value) + lower_value;
+		int new_parent, new_sibling;
+		//insert new node above the current one
+		new_parent = available_node();
+		nodes()[new_parent].split_dimension = dimension;
+		nodes()[new_parent].split_value = split_value;
+		nodes()[new_parent].tau = parent_tau + E;
+		//insert new leaf, sibbling of the current one
+		new_sibling = available_node();
+		node_available -= 2;
+
+		//Update the box of the new parent
+		for(int i = 0; i < feature_count; ++i){
+			nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
+			nodes()[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
+		}
+		//NOTE Creates counters for the label of the new parent
+		//for(int i = 0; i < label_count; ++i)
+		//nodes[new_parent].counters[i] = node.counters[i];
+		//nodes[new_parent].counters[label] += 1;
+
+		//Creates counters for the label of the new sibling
+		for(int i = 0; i < label_count; ++i)
+			nodes()[new_sibling].counters[i] = 0;
+		//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
+
+		//Make the connections between the new nodes
+		nodes()[new_parent].parent = node.parent;
+		if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
+			tree_bases()[tree_id].root = new_parent;
+		else{
+			Node& parent = nodes()[node.parent];
+			if(parent.child_left == node_id)
+				parent.child_left = new_parent;
+			else
+				parent.child_right = new_parent;
+		}
+
+
+		node.parent = new_parent;
+
+		nodes()[new_sibling].parent = new_parent;
+		if(features[dimension] == upper_value){ //right
+			nodes()[new_parent].child_right = new_sibling;
+			nodes()[new_parent].child_left = node_id;
+		}
+		else{ //left
+			nodes()[new_parent].child_left = new_sibling;
+			nodes()[new_parent].child_right = node_id;
+		}
+
+		sample_block(new_sibling, features, label);
+	}
+	else if(E < 0 || parent_tau + E > node.tau){ //Otherwise, just update the box
+		//update lower bound and upper bound of this node
+		for(int i = 0; i < feature_count; ++i){
+			if(node.bound_lower[i] > features[i])
+				node.bound_lower[i] = features[i];
+			if(node.bound_upper[i] < features[i])
+				node.bound_upper[i] = features[i];
+		}
+		//if not leaf, recurse on the node that contains the data point
+		if(!node.is_leaf()){
+			if(features[node.split_dimension] <= node.split_value)
+				extend_block2(node.child_left, tree_id, features, label);
+			else if(features[node.split_dimension] > node.split_value)
+				extend_block2(node.child_right, tree_id, features, label);
+			//NOTE: we don't update the counters of labels here because the counting will be done when prediction is required.
+			//We can optimize that.
+		}
+		else{
+			//Update the counter of label
+			node.counters[label] += 1;
+		}
+	}
+}
+//Ghost (stop going down when branch off but no node)
+void extend_block1(int const node_id, int const tree_id, feature_type const* features, int const label){
+	//e_lower and e_upper are used to compute probabilities
+	feature_type e_lower[feature_count], e_upper[feature_count];
+	double probabilities[feature_count];
+	Node& node = nodes()[node_id];
+	int const parent_id = node.parent;
+	double const parent_tau = node.parent >= 0 ? nodes()[node.parent].tau : 0; //The tau value of the parent of the root is 0
+	//sum is used as a parameter to pick random numbers following exponential law
+	feature_type sum = 0;
+	//compute e_lower, e_upper and sum
+	for(int i = 0; i < feature_count; ++i){
+		e_lower[i] = node.bound_lower[i] - features[i] > 0 ? node.bound_lower[i] - features[i] : 0;
+		e_upper[i] = features[i] - node.bound_upper[i] > 0 ? features[i] - node.bound_upper[i] : 0;
+		probabilities[i] = e_lower[i] + e_upper[i];
+		sum += e_lower[i] + e_upper[i];
+	}
+	//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
+	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
+	bool update_box = false;
+
+	bool pause_expension = false;
+	if((tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)){
+		int const remaining_depth = node_depth(node_id, nullptr);
+		int const distance_to_root = unravel(node_id);
+		pause_expension = remaining_depth + distance_to_root + 1 > tree_bases()[tree_id].node_count_limit;
+	}
+	else{
+		pause_expension = tree_bases()[tree_id].is_paused(tree_management);
+	}
+
+	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !pause_expension){//Introduce a new parent and a new sibling
+		Utils::turn_array_into_probability(probabilities, feature_count, sum);
+		//sample features with probability proportional to e_lower[i] + e_upper[i]
+		int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+
+		//Select the bound to choose the split from
+		double lower_value, upper_value;
+		if(features[dimension] > node.bound_upper[dimension]){
+			lower_value = node.bound_upper[dimension];
+			upper_value = features[dimension];
+		}
+		else if(features[dimension] < node.bound_lower[dimension]){
+			lower_value = features[dimension];
+			upper_value = node.bound_lower[dimension];
+		}
+
+		//sample the split between [lower_value, upper_value]
+		double const split_value = func::rand_uniform()*(upper_value - lower_value) + lower_value;
+		int new_parent, new_sibling;
+		//insert new node above the current one
+		new_parent = available_node();
+		nodes()[new_parent].split_dimension = dimension;
+		nodes()[new_parent].split_value = split_value;
+		nodes()[new_parent].tau = parent_tau + E;
+		//insert new leaf, sibbling of the current one
+		new_sibling = available_node();
+		node_available -= 2;
+
+		//Update the box of the new parent
+		for(int i = 0; i < feature_count; ++i){
+			nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
+			nodes()[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
+		}
+		//NOTE Creates counters for the label of the new parent
+		for(int i = 0; i < label_count; ++i)
+			nodes()[new_parent].counters[i] = node.counters[i];
+		nodes()[new_parent].counters[label] += 1;
+
+		//Creates counters for the label of the new sibling
+		for(int i = 0; i < label_count; ++i)
+			nodes()[new_sibling].counters[i] = 0;
+		//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
+
+		//Make the connections between the new nodes
+		nodes()[new_parent].parent = node.parent;
+		if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
+			tree_bases()[tree_id].root = new_parent;
+		else{
+			Node& parent = nodes()[node.parent];
+			if(parent.child_left == node_id)
+				parent.child_left = new_parent;
+			else
+				parent.child_right = new_parent;
+		}
+
+
+		node.parent = new_parent;
+
+		nodes()[new_sibling].parent = new_parent;
+		if(features[dimension] == upper_value){ //right
+			nodes()[new_parent].child_right = new_sibling;
+			nodes()[new_parent].child_left = node_id;
+		}
+		else{ //left
+			nodes()[new_parent].child_left = new_sibling;
+			nodes()[new_parent].child_right = node_id;
+		}
+
+		sample_block(new_sibling, features, label);
+	}
+	//else{ //Otherwise, just update the box
+	else if(E < 0 || parent_tau + E > node.tau){ //Otherwise, just update the box
+		//update lower bound and upper bound of this node
+		for(int i = 0; i < feature_count; ++i){
+			if(node.bound_lower[i] > features[i])
+				node.bound_lower[i] = features[i];
+			if(node.bound_upper[i] < features[i])
+				node.bound_upper[i] = features[i];
+		}
+		//if not leaf, recurse on the node that contains the data point
+		if(!node.is_leaf()){
+			if(features[node.split_dimension] <= node.split_value)
+				extend_block1(node.child_left, tree_id, features, label);
+			else if(features[node.split_dimension] > node.split_value)
+				extend_block1(node.child_right, tree_id, features, label);
+			node.counters[label] += 1;
+		}
+		else{
+			//Update the counter of label
+			node.counters[label] += 1;
+		}
+	}
+	else{
+		node.counters[label] += 1;
+	}
+}
+//Increase counter but don't update box
+void extend_block3(int const node_id, int const tree_id, feature_type const* features, int const label){
+	//e_lower and e_upper are used to compute probabilities
+	feature_type e_lower[feature_count], e_upper[feature_count];
+	double probabilities[feature_count];
+	Node& node = nodes()[node_id];
+	int const parent_id = node.parent;
+	double const parent_tau = node.parent >= 0 ? nodes()[node.parent].tau : 0; //The tau value of the parent of the root is 0
+	//sum is used as a parameter to pick random numbers following exponential law
+	feature_type sum = 0;
+	//compute e_lower, e_upper and sum
+	for(int i = 0; i < feature_count; ++i){
+		e_lower[i] = node.bound_lower[i] - features[i] > 0 ? node.bound_lower[i] - features[i] : 0;
+		e_upper[i] = features[i] - node.bound_upper[i] > 0 ? features[i] - node.bound_upper[i] : 0;
+		probabilities[i] = e_lower[i] + e_upper[i];
+		sum += e_lower[i] + e_upper[i];
+	}
+	//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
+	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
+	bool update_box = false;
+
+	bool pause_expension = false;
+	if((tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)){
+		int const remaining_depth = node_depth(node_id, nullptr);
+		int const distance_to_root = unravel(node_id);
+		pause_expension = remaining_depth + distance_to_root + 1 > tree_bases()[tree_id].node_count_limit;
+	}
+	else{
+		pause_expension = tree_bases()[tree_id].is_paused(tree_management);
+	}
+
+	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !pause_expension){//Introduce a new parent and a new sibling
+		Utils::turn_array_into_probability(probabilities, feature_count, sum);
+		//sample features with probability proportional to e_lower[i] + e_upper[i]
+		int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+
+		//Select the bound to choose the split from
+		double lower_value, upper_value;
+		if(features[dimension] > node.bound_upper[dimension]){
+			lower_value = node.bound_upper[dimension];
+			upper_value = features[dimension];
+		}
+		else if(features[dimension] < node.bound_lower[dimension]){
+			lower_value = features[dimension];
+			upper_value = node.bound_lower[dimension];
+		}
+
+		//sample the split between [lower_value, upper_value]
+		double const split_value = func::rand_uniform()*(upper_value - lower_value) + lower_value;
+		int new_parent, new_sibling;
+		//insert new node above the current one
+		new_parent = available_node();
+		nodes()[new_parent].split_dimension = dimension;
+		nodes()[new_parent].split_value = split_value;
+		nodes()[new_parent].tau = parent_tau + E;
+		//insert new leaf, sibbling of the current one
+		new_sibling = available_node();
+		node_available -= 2;
+
+		//Update the box of the new parent
+		for(int i = 0; i < feature_count; ++i){
+			nodes()[new_parent].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
+			nodes()[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
+		}
+		//NOTE Creates counters for the label of the new parent
+		//for(int i = 0; i < label_count; ++i)
+		//nodes[new_parent].counters[i] = node.counters[i];
+		//nodes[new_parent].counters[label] += 1;
+
+		//Creates counters for the label of the new sibling
+		for(int i = 0; i < label_count; ++i)
+			nodes()[new_sibling].counters[i] = 0;
+		//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
+
+		//Make the connections between the new nodes
+		nodes()[new_parent].parent = node.parent;
+		if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
+			tree_bases()[tree_id].root = new_parent;
+		else{
+			Node& parent = nodes()[node.parent];
+			if(parent.child_left == node_id)
+				parent.child_left = new_parent;
+			else
+				parent.child_right = new_parent;
+		}
+
+
+		node.parent = new_parent;
+
+		nodes()[new_sibling].parent = new_parent;
+		if(features[dimension] == upper_value){ //right
+			nodes()[new_parent].child_right = new_sibling;
+			nodes()[new_parent].child_left = node_id;
+		}
+		else{ //left
+			nodes()[new_parent].child_left = new_sibling;
+			nodes()[new_parent].child_right = node_id;
+		}
+
+		sample_block(new_sibling, features, label);
+	}
+	else if(E < 0 || parent_tau + E > node.tau){ //Otherwise, just update the box
+		//update lower bound and upper bound of this node
+		for(int i = 0; i < feature_count; ++i){
+			if(node.bound_lower[i] > features[i])
+				node.bound_lower[i] = features[i];
+			if(node.bound_upper[i] < features[i])
+				node.bound_upper[i] = features[i];
+		}
+	}
+	//if not leaf, recurse on the node that contains the data point
+	if(!node.is_leaf()){
+		if(features[node.split_dimension] <= node.split_value)
+			extend_block3(node.child_left, tree_id, features, label);
+		else if(features[node.split_dimension] > node.split_value)
+			extend_block3(node.child_right, tree_id, features, label);
+		//NOTE: we don't update the counters of labels here because the counting will be done when prediction is required.
+		//We can optimize that.
+	}
+	else{
+		//Update the counter of label
+		node.counters[label] += 1;
+	}
+}
+//Count forced extend
+void extend_block4(int const node_id, int const tree_id, feature_type const* features, int const label, int const forced_extend_sum=0){
+	//e_lower and e_upper are used to compute probabilities
+	feature_type e_lower[feature_count], e_upper[feature_count];
+	double probabilities[feature_count];
+	Node& node = nodes()[node_id];
+	int const parent_id = node.parent;
+	double const parent_tau = node.parent >= 0 ? nodes()[node.parent].tau : 0; //The tau value of the parent of the root is 0
+	//sum is used as a parameter to pick random numbers following exponential law
+	feature_type sum = 0;
+	//compute e_lower, e_upper and sum
+	for(int i = 0; i < feature_count; ++i){
+		e_lower[i] = node.bound_lower[i] - features[i] > 0 ? node.bound_lower[i] - features[i] : 0;
+		e_upper[i] = features[i] - node.bound_upper[i] > 0 ? features[i] - node.bound_upper[i] : 0;
+		probabilities[i] = e_lower[i] + e_upper[i];
+		sum += e_lower[i] + e_upper[i];
+	}
+	//Pick a random number following an exponential law of parameter *sum* (except if sum is 0)
+	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
+	bool update_box = false;
+
+	bool pause_expension = false;
+	if((tree_management == COBBLE_MANAGEMENT || tree_management == OPTIMISTIC_COBBLE_MANAGEMENT)){
+		int const remaining_depth = node_depth(node_id, nullptr);
+		int const distance_to_root = unravel(node_id);
+		pause_expension = remaining_depth + distance_to_root + 1 > tree_bases()[tree_id].node_count_limit;
+	}
+	else{
+		pause_expension = tree_bases()[tree_id].is_paused(tree_management);
+		//PAUSE
+		pause_expension = total_count >= 20 && total_count <= 150;
+	}
+
+	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !pause_expension){//Introduce a new parent and a new sibling
+		bool split_instead = false;
+		//If forced_extend_sum is higher than 0, then we consider spliting
+		if(forced_extend_sum > 0){
+			double const probability = static_cast<double>(node.forced_extend) / static_cast<double>(forced_extend_sum);
+			split_instead = (func::rand_uniform() <  probability);
+		}
+
+		if(fe_split_trigger == SPLIT_TRIGGER_NONE){
+			extend_node(node_id, tree_id, features, label, parent_id, parent_tau, probabilities, E, sum);
+		}
+		else if(fe_split_trigger == SPLIT_TRIGGER_POSITIVE && node.forced_extend > 0){
+			split_node(node_id, tree_id, features, label, parent_id, parent_tau, probabilities, E);
+		}
+		else if((fe_split_trigger == SPLIT_TRIGGER_TOTAL || fe_split_trigger == SPLIT_TRIGGER_SFE) && split_instead){
+			split_node(node_id, tree_id, features, label, parent_id, parent_tau, probabilities, E);
+		}
+		else{
+			extend_node(node_id, tree_id, features, label, parent_id, parent_tau, probabilities, E, sum);
+		}
+	}
+	else{ //Otherwise, just update the box
+		//update lower bound and upper bound of this node
+		for(int i = 0; i < feature_count; ++i){
+			if(node.bound_lower[i] > features[i]){
+				double const difference = (node.bound_lower[i] - features[i]) * fe_parameter;
+				node.bound_lower[i] -= difference;
+			}
+			if(node.bound_upper[i] < features[i]){
+				double const difference = (features[i] - node.bound_upper[i]) * fe_parameter;
+				node.bound_upper[i] += difference;
+			}
+		}
+		//Check if it's a forced extend
+		if(E >= 0 && (parent_tau + E < node.tau)){
+			node.forced_extend += 1;
+		}
+		//if not leaf, recurse on the node that contains the data point
+		if(!node.is_leaf()){
+			if(features[node.split_dimension] <= node.split_value)
+				extend_block4(node.child_left, tree_id, features, label, forced_extend_sum);
+			else if(features[node.split_dimension] > node.split_value)
+				extend_block4(node.child_right, tree_id, features, label, forced_extend_sum);
+			//NOTE: we don't update the counters of labels here because the counting will be done when prediction is required.
+			//We can optimize that.
+		}
+		else{
+			bool has_split_bary = false;
+			//PAUSE
+			if((total_count < 20 || total_count >= 150) && E < 0 && node_available >= 2){//Data point in the box
+					has_split_bary = split_barycenter(node_id, tree_id, features, label, parent_id, parent_tau);
+			}
+			if(!has_split_bary){
+				//Update the counter of label
+				node.counters[label] += 1;
+			}
+		}
+	}
+}
+void extend_node(int const node_id, int const tree_id, feature_type const* features, int const label, int const parent_id, double const parent_tau, double* probabilities, double const E, double const sum){
+		Node& node = nodes()[node_id];
+		int new_parent_id, new_sibling_id;
+		bool current_node_on_left = true;
+		Utils::turn_array_into_probability(probabilities, feature_count, sum);
+		//sample features with probability proportional to e_lower[i] + e_upper[i]
+		int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+
+		//Select the bound to choose the split from
+		double lower_value, upper_value;
+		if(features[dimension] > node.bound_upper[dimension]){
+			lower_value = node.bound_upper[dimension];
+			upper_value = features[dimension];
+		}
+		else if(features[dimension] < node.bound_lower[dimension]){
+			lower_value = features[dimension];
+			upper_value = node.bound_lower[dimension];
+		}
+
+		//sample the split between [lower_value, upper_value]
+		double const split_value = func::rand_uniform()*(upper_value - lower_value) + lower_value;
+		//insert new node above the current one
+		new_parent_id = available_node();
+		nodes()[new_parent_id].split_dimension = dimension;
+		nodes()[new_parent_id].split_value = split_value;
+		nodes()[new_parent_id].tau = parent_tau + E;
+		//insert new leaf, sibbling of the current one
+		new_sibling_id = available_node();
+		node_available -= 2;
+
+		//Update the box of the new parent
+		for(int i = 0; i < feature_count; ++i){
+			nodes()[new_parent_id].bound_lower[i] = features[i] < node.bound_lower[i] ? features[i] : node.bound_lower[i];
+			nodes()[new_parent_id].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
+		}
+		//NOTE Creates counters for the label of the new parent
+		//for(int i = 0; i < label_count; ++i)
+		//nodes[new_parent_id].counters[i] = node.counters[i];
+		//nodes[new_parent_id].counters[label] += 1;
+
+		//Creates counters for the label of the new sibling
+		for(int i = 0; i < label_count; ++i)
+			nodes()[new_sibling_id].counters[i] = 0;
+		//No need to increase the counter for the current label because we will call sample_block soon on new_sibling
+
+		sample_block(new_sibling_id, features, label);
+		if(features[dimension] == upper_value){ //right
+			current_node_on_left = false;
+		}
+		else{
+			current_node_on_left = true;
+		}
+
+		//Make the connections between the new nodes
+		nodes()[new_parent_id].parent = node.parent;
+		if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
+			tree_bases()[tree_id].root = new_parent_id;
+		else{
+			Node& parent = nodes()[node.parent];
+			if(parent.child_left == node_id)
+				parent.child_left = new_parent_id;
+			else
+				parent.child_right = new_parent_id;
+		}
+
+
+		node.parent = new_parent_id;
+
+		nodes()[new_sibling_id].parent = new_parent_id;
+		if(!current_node_on_left){ //right
+			nodes()[new_parent_id].child_right = new_sibling_id;
+			nodes()[new_parent_id].child_left = node_id;
+		}
+		else{ //left
+			nodes()[new_parent_id].child_left = new_sibling_id;
+			nodes()[new_parent_id].child_right = node_id;
+		}
+}
+public:
+void split_node(int const node_id, int const tree_id, feature_type const* features, int const label, int const parent_id, double const parent_tau, double* probabilities, double const E){
+	int new_parent_id, new_sibling_id;
+	double sum = 0;
+	Node& node = nodes()[node_id];
+	for(int i = 0; i < feature_count; ++i){
+		probabilities[i] = node.bound_upper[i] - node.bound_lower[i];
+		sum += probabilities[i];
+	}
+	Utils::turn_array_into_probability(probabilities, feature_count, sum);
+	//sample features with probability proportional to e_lower[i] + e_upper[i]
+	int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+
+	//Select the bound to choose the split from
+	double lower_value = node.bound_lower[dimension], upper_value = node.bound_upper[dimension];
+
+	//sample the split between [lower_value, upper_value]
+	double const random_value = func::rand_uniform();
+	double const split_value = random_value*(upper_value - lower_value) + lower_value;
+
+	new_parent_id = available_node();
+	nodes()[new_parent_id].tau = parent_tau + E;
+	new_sibling_id = available_node();
+	nodes()[new_sibling_id].tau = lifetime;
+	node_available -= 2;
+
+	Node &new_parent = nodes()[new_parent_id];
+	Node &new_sibling = nodes()[new_sibling_id];
+
+	new_parent.split_dimension = dimension;
+	new_parent.split_value = split_value;
+	//Set the box for the new children and the new_parent and the node (depending on the values in features
+	//The current datapoint is passed through after readjusting counters and shape
+	for(int i = 0; i < feature_count; ++i){
+		new_parent.bound_lower[i] = Utils::min(node.bound_lower[i], features[i]);
+		new_parent.bound_upper[i] = Utils::max(node.bound_upper[i], features[i]);
+		new_sibling.bound_lower[i] = node.bound_lower[i];
+		new_sibling.bound_upper[i] = node.bound_upper[i];
+	}
+
+	//Creates counters for the label of the new sibling
+	for(int i = 0; i < label_count; ++i)
+		new_sibling.counters[i] = 0;
+	//No need to increase the counter for the current label because we will do it later, when passing down.
+
+	//Make the connections between the new nodes
+	if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
+		tree_bases()[tree_id].root = new_parent_id;
+	else{ //Otherwise, replace the existing pointer to parent
+		Node& parent = nodes()[node.parent];
+		if(parent.child_left == node_id)
+			parent.child_left = new_parent_id;
+		else
+			parent.child_right = new_parent_id;
+	}
+
+	//Count sub-trees !
+	int count_left = 0, count_right = 0;
+	count_sides(node_id, dimension, split_value, count_left, count_right);
+	bool const subtree_on_left = (count_left > count_right);
+	//If more count are higher than split ---> new sibling goes left
+	//set the connections
+	if(subtree_on_left){
+		new_parent.child_right = new_sibling_id;
+		new_parent.child_left = node_id;
+		node.bound_upper[dimension] = split_value;
+		new_sibling.bound_lower[dimension] = split_value;
+	}
+	else{
+		new_parent.child_right = node_id;
+		new_parent.child_left = new_sibling_id;
+		node.bound_lower[dimension] = split_value;
+		new_sibling.bound_upper[dimension] = split_value;
+	}
+	new_parent.parent = node.parent;
+	node.parent = new_parent_id;
+	new_sibling.parent = new_parent_id;
+
+	//Distribute Forced_extend
+	if(fe_distribution == FE_DISTRIBUTION_ZERO){
+		node.forced_extend = 0;
+		new_sibling.forced_extend = 0;
+	}
+	else if(fe_distribution == FE_DISTRIBUTION_SPLIT){
+		new_sibling.forced_extend = 0.5 * node.forced_extend;
+		node.forced_extend *= 0.5;
+	}
+	else if(fe_distribution == FE_DISTRIBUTION_PROPORTIONAL){
+		double const sum_count = static_cast<double>(count_left + count_right);
+		double const ratio_fe = subtree_on_left ? static_cast<double>(count_left)/sum_count : static_cast<double>(count_left)/sum_count;
+		new_sibling.forced_extend = (1-ratio_fe) * node.forced_extend;
+		node.forced_extend *= ratio_fe;
+	}
+	else if(fe_distribution == FE_DISTRIBUTION_DECREMENT){
+		new_sibling.forced_extend = 0;
+		node.forced_extend --;
+	}
+	new_parent.forced_extend = 0;
+
+	int to_remove[label_count] = {0};
+	//If subtree_on_left, then discharge on right
+	adjust_counters(node_id, dimension, split_value, !subtree_on_left, to_remove);
+	//Place the new counters in new_sibling
+	for(int i = 0; i < label_count; ++i)
+		new_sibling.counters[i] += to_remove[i];
+	//Adjust the boxes' bound and reshape the tree is needed
+	adjust_boxes(node_id, dimension, split_value, subtree_on_left, tree_id);
+
+	//Propage the datapoint on the right side of the new split
+	if(features[dimension] > split_value){
+		pass_data_point_down(new_parent.child_right, features, label);
+	}
+	else{
+		pass_data_point_down(new_parent.child_left, features, label);
+	}
+}
+bool split_barycenter(int const node_id, int const tree_id, feature_type const* features, int const label, int const parent_id, double const parent_tau){
+	int new_parent_id, new_sibling_id;
+	double sum = 0;
+	Node& node = nodes()[node_id];
+	double barycenter[feature_count];
+	double probabilities[feature_count];
+	if(split_helper == SPLIT_HELPER_WEIGHTED)
+		find_barycenter(tree_bases()[tree_id].root, barycenter);
+	else if(split_helper == SPLIT_HELPER_AVG){
+		for(int i = 0; i < feature_count; i++){
+			barycenter[i] = sum_features[i]/count_points;
+		}
+	}
+	else if(split_helper == SPLIT_HELPER_NONE)
+		return false;
+
+	for(int i = 0; i < feature_count; ++i){
+		if(barycenter[i] > node.bound_lower[i] && barycenter[i] < node.bound_upper[i]){
+			probabilities[i] = Utils::abs(barycenter[i] - features[i]);
+			sum += probabilities[i];
+		}
+		else{
+			probabilities[i] = 0;
+		}
+	}
+	double const E = sum == 0 ?  -1 : Utils::rand_exponential<func>(sum);
+	if(sum == 0){
+		return false;
+	}
+
+	Utils::turn_array_into_probability(probabilities, feature_count, sum);
+	//sample features with probability proportional to e_lower[i] + e_upper[i]
+	int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+
+	//Select the bound to choose the split from
+	double lower_value = Utils::min(barycenter[dimension], features[dimension]);
+	double upper_value = Utils::max(barycenter[dimension], features[dimension]);
+
+	//sample the split between [lower_value, upper_value]
+	double const random_value = func::rand_uniform();
+	double const split_value = random_value*(upper_value - lower_value) + lower_value;
+
+	new_parent_id = available_node();
+	nodes()[new_parent_id].tau = parent_tau + (node.tau - parent_tau)*random_value;
+	new_sibling_id = available_node();
+	nodes()[new_sibling_id].tau = lifetime;
+	node_available -= 2;
+
+	Node &new_parent = nodes()[new_parent_id];
+	Node &new_sibling = nodes()[new_sibling_id];
+
+	new_parent.split_dimension = dimension;
+	new_parent.split_value = split_value;
+	//Set the box for the new children and the new_parent and the node (depending on the values in features
+	//The current datapoint is passed through after readjusting counters and shape
+	for(int i = 0; i < feature_count; ++i){
+		new_parent.bound_lower[i] = Utils::min(node.bound_lower[i], features[i]);
+		new_parent.bound_upper[i] = Utils::max(node.bound_upper[i], features[i]);
+		new_sibling.bound_lower[i] = node.bound_lower[i];
+		new_sibling.bound_upper[i] = node.bound_upper[i];
+	}
+
+	//Creates counters for the label of the new sibling
+	for(int i = 0; i < label_count; ++i)
+		new_sibling.counters[i] = 0;
+	//No need to increase the counter for the current label because we will do it later, when passing down.
+
+	//Make the connections between the new nodes
+	if(!node.has_parent() && node_id == tree_bases()[tree_id].root)//We introduce a parent to the root
+		tree_bases()[tree_id].root = new_parent_id;
+	else{ //Otherwise, replace the existing pointer to parent
+		Node& parent = nodes()[node.parent];
+		if(parent.child_left == node_id)
+			parent.child_left = new_parent_id;
+		else
+			parent.child_right = new_parent_id;
+	}
+
+	//Count sub-trees !
+	int count_left = 0, count_right = 0;
+	count_sides(node_id, dimension, split_value, count_left, count_right);
+	bool const subtree_on_left = (count_left > count_right);
+	//If more count are higher than split ---> new sibling goes left
+	//set the connections
+	if(subtree_on_left){
+		new_parent.child_right = new_sibling_id;
+		new_parent.child_left = node_id;
+		node.bound_upper[dimension] = split_value;
+		new_sibling.bound_lower[dimension] = split_value;
+	}
+	else{
+		new_parent.child_right = node_id;
+		new_parent.child_left = new_sibling_id;
+		node.bound_lower[dimension] = split_value;
+		new_sibling.bound_upper[dimension] = split_value;
+	}
+	new_parent.parent = node.parent;
+	node.parent = new_parent_id;
+	new_sibling.parent = new_parent_id;
+
+	//Distribute Forced_extend
+	if(fe_distribution == FE_DISTRIBUTION_ZERO){
+		node.forced_extend = 0;
+		new_sibling.forced_extend = 0;
+	}
+	else if(fe_distribution == FE_DISTRIBUTION_SPLIT){
+		new_sibling.forced_extend = 0.5 * node.forced_extend;
+		node.forced_extend *= 0.5;
+	}
+	else if(fe_distribution == FE_DISTRIBUTION_PROPORTIONAL){
+		double const sum_count = static_cast<double>(count_left + count_right);
+		double const ratio_fe = subtree_on_left ? static_cast<double>(count_left)/sum_count : static_cast<double>(count_left)/sum_count;
+		new_sibling.forced_extend = (1-ratio_fe) * node.forced_extend;
+		node.forced_extend *= ratio_fe;
+	}
+	else if(fe_distribution == FE_DISTRIBUTION_DECREMENT){
+		new_sibling.forced_extend = 0;
+		node.forced_extend --;
+	}
+	new_parent.forced_extend = 0;
+
+	int to_remove[label_count] = {0};
+	//If subtree_on_left, then discharge on right
+	adjust_counters(node_id, dimension, split_value, !subtree_on_left, to_remove);
+	//Place the new counters in new_sibling
+	for(int i = 0; i < label_count; ++i)
+		new_sibling.counters[i] += to_remove[i];
+	//Adjust the boxes' bound and reshape the tree is needed
+	adjust_boxes(node_id, dimension, split_value, subtree_on_left, tree_id);
+
+	//Propage the datapoint on the right side of the new split
+	if(features[dimension] > split_value){
+		pass_data_point_down(new_parent.child_right, features, label);
+	}
+	else{
+		pass_data_point_down(new_parent.child_left, features, label);
+	}
+	return true;
+}
+template<int max_stack_size=100>
+int count_sides(int const start_id, int const split_dimension, double const split_value, int& count_left, int& count_right){
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = start_id;
+	int depth = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				if(node_id == start_id)
+					break;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+
+			int count = 0;
+			for(int i = 0; i < label_count; ++i){
+				count += node.counters[i];
+			}
+			double const lower = node.bound_lower[split_dimension];
+			double const upper = node.bound_upper[split_dimension];
+			if(split_value > lower && split_value < upper){
+				double const percent = static_cast<double>(split_value-lower) / static_cast<double>(upper - lower);
+				int left = static_cast<int>(static_cast<double>(count) * percent);
+				int right = static_cast<int>(static_cast<double>(count) * (1-percent));
+				int const err = count - left - right;
+				if(err != 0 && func::rand_uniform() < 0.5)
+					left += err;
+				else if(err != 0)
+					right += err;
+				count_left += left;
+				count_right += right;
+			}
+			else if(split_value <= lower)
+				count_left += count;
+			else if(split_value >= upper)
+				count_right += count;
+
+			if(node_id == start_id)
+				break;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return 0;
+}
+template<int max_stack_size=100>
+int adjust_boxes(int const start_id, int const split_dimension, double const split_value, bool const subtree_on_left, int const tree_id){
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = start_id;
+	int depth = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				if(subtree_on_left){
+					if(node.bound_upper[split_dimension] > split_value)
+						node.bound_upper[split_dimension] = split_value;
+					if(node.bound_lower[split_dimension] > split_value)
+						node.bound_lower[split_dimension] = split_value;
+				}
+				else{
+					if(node.bound_upper[split_dimension] < split_value)
+						node.bound_upper[split_dimension] = split_value;
+					if(node.bound_lower[split_dimension] < split_value)
+						node.bound_lower[split_dimension] = split_value;
+				}
+				if(node.bound_upper[split_dimension] - node.bound_lower[split_dimension] == 0){ //This box is zero, let's go up
+					depth -= 1;
+					node_id = node.parent;
+					node_reset(node.child_right);
+					node_reset(node.child_left);
+					//NOTE the start_id node shouldn't be at zero.
+				}
+				else{ //Go right
+					stack[depth] = 0;
+					depth += 1;
+					node_id = node.child_right;
+				}
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+
+				Node const& child_left = nodes()[node.child_left];
+				Node const& child_right = nodes()[node.child_right];
+				int const left_zeroed = (child_left.bound_upper[split_dimension] - child_left.bound_lower[split_dimension] == 0);
+				int const right_zeroed = (child_right.bound_upper[split_dimension] - child_right.bound_lower[split_dimension] == 0);
+				bool const is_root = (node.parent < 0);
+				bool const is_starting = (node_id == start_id);
+				//NOTE either left or right is zeroed. If both are, then we stop going down at that node before
+				int replacer_id = -1, other_id = -1;
+				if(left_zeroed){ //replace current node with right
+					replacer_id = node.child_right;
+					other_id = node.child_left;
+				}
+				else if(right_zeroed){ //replace current node with left
+					replacer_id = node.child_left;
+					other_id = node.child_right;
+				}
+
+				if(replacer_id != -1){
+					Node& replacer = nodes()[replacer_id];
+					if(is_root){ //The root is replaced by one of the children
+						tree_bases()[tree_id].root = replacer_id;
+						nodes()[other_id].reset();
+						node.reset();
+						nodes()[replacer_id].parent = -1;
+						node_available += 2;
+						break;
+					}
+					else{ //Replace the current node in the parent 's children
+						Node& parent = nodes()[node.parent];
+						if(parent.child_left == node_id)
+							parent.child_left = replacer_id;
+						else
+							parent.child_right = replacer_id;
+						replacer.parent = node.parent;
+					}
+					//Set the id to keep exploring the tree before the reset
+					node_id = node.parent;
+					//reset other_id and node
+					nodes()[other_id].reset();
+					node.reset();
+					node_available += 2;
+					if(is_starting)
+						break;
+				}
+				else{
+					if(node_id == start_id)
+						break;
+					node_id = node.parent;
+				}
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+			if(subtree_on_left){
+				if(node.bound_upper[split_dimension] > split_value)
+					node.bound_upper[split_dimension] = split_value;
+				if(node.bound_lower[split_dimension] > split_value)
+					node.bound_lower[split_dimension] = split_value;
+			}
+			else{
+				if(node.bound_upper[split_dimension] < split_value)
+					node.bound_upper[split_dimension] = split_value;
+				if(node.bound_lower[split_dimension] < split_value)
+					node.bound_lower[split_dimension] = split_value;
+			}
+			if(node_id == start_id)
+				break;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return 0;
+}
+template<int max_stack_size=100>
+int adjust_counters(int const start_id, int split_dimension, double split_value, bool discharge_left, int* to_remove){
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = start_id;
+	int depth = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				if(node_id == start_id)
+					break;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+
+
+			//Compute size of box
+			double const max_value = node.bound_upper[split_dimension] - node.bound_lower[split_dimension];
+			//Get the percentage on the left (below the split value)
+			double percentage = Utils::min(Utils::max((split_value - node.bound_lower[split_dimension]) / max_value, 0.0), 1.0);
+			//If this sub-tree is not on the left, invert percentage
+			if(!discharge_left)
+				percentage = 1 - percentage;
+			for(int i = 0; i < label_count; ++i){
+				int counter_out = Utils::round(static_cast<double>(node.counters[i]) * percentage);
+				int counter_in = Utils::round(static_cast<double>(node.counters[i]) * (1 - percentage));
+				int const err = node.counters[i] - counter_in - counter_out;
+				if(err != 0)
+					cout << "Error counters" << endl;
+				to_remove[i] += counter_out;
+				node.counters[i] = counter_in;
+			}
+			if(node_id == start_id)
+				break;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return 0;
+}
+int pass_data_point_down(int const start_id, feature_type const* features, int const label){
+	int node_id = start_id;
+
+	//Loop to find the leaf
+	while(true){
+		Node& node = nodes()[node_id];
+		//Update box size
+		for(int i = 0; i < feature_count; ++i){
+			double const lower = Utils::min(node.bound_lower[i], features[i]);
+			double const upper = Utils::max(node.bound_upper[i], features[i]);
+			node.bound_lower[i] = lower;
+			node.bound_upper[i] = upper;
+		}
+		if(node.is_leaf())
+			break;
+		//Choose a direction
+		if(features[node.split_dimension] > node.split_value)
+			node_id = node.child_right;
+		else
+			node_id = node.child_left;
+	}
+	nodes()[node_id].counters[label] += 1;
+	return node_id;
+}
+int count_fe_down(int const start_id, feature_type const* features) const{
+	int node_id = start_id;
+	Node const* cnodes = nodes();
+	int count = 0;
+
+	//Loop to find the leaf
+	while(!cnodes[node_id].is_leaf()){
+		Node const&  node = cnodes[node_id];
+		count += node.forced_extend;
+		//Choose a direction
+		if(features[node.split_dimension] > node.split_value)
+			node_id = node.child_right;
+		else
+			node_id = node.child_left;
+	}
+	count += cnodes[node_id].forced_extend;
+	return count;
+}
+void generate_datapoint_from_tree(int const tree_id, feature_type* features, int& label) const{
+	int const root_id = tree_bases()[tree_id].root;
+	int selected_node = -1;
+	generate_datapoint_from_node(root_id, selected_node);
+	Node const& node = nodes()[selected_node];
+	double probabilities[label_count];
+	double sum = 0;
+	for(int i = 0; i < label_count; ++i){
+		probabilities[i] = node.counters[i];
+		sum += node.counters[i];
+	}
+
+	Utils::turn_array_into_probability(probabilities, label_count, sum);
+	label = Utils::pick_from_distribution<func>(probabilities, label_count);
+	for(int i = 0; i < feature_count; ++i){
+		double const r = func::rand_uniform();
+		features[i] = (r * (node.bound_upper[i] - node.bound_lower[i])) + node.bound_lower[i];
+	}
+}
+template<int max_stack_size=100>
+int generate_datapoint_from_node(int const start_id, int& selected_node) const{
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	double sum_of_weights = 0;
+	double selected_weight = -1;
+	selected_node = -1;
+
+	int node_id = start_id;
+	int depth = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node const& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				if(node_id == start_id)
+					break;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+
+			double count = 0;
+			for(int i = 0; i < label_count; ++i){
+				count += static_cast<double>(node.counters[i]);
+			}
+			//-ln(r)/weight == r^(1/w) I tested it!!!
+			double const j = func::rand_uniform();
+			double const r = -(func::log(j)/count);
+			if(selected_node < 0 || r < selected_weight){
+				selected_node = node_id;
+				selected_weight = r;
+			}
+
+			if(node_id == start_id)
+				break;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return 0;
+}
+void generate_tree_from_tree(int const src_tree, int const dst_tree){
+	feature_type features[feature_count];
+	int label;
+
+	int count = node_available;
+	if(generate_full_point)
+		count = count_data_point_tree(src_tree);
+
+	for(int i = 0; i < count; ++i){
+		generate_datapoint_from_tree(src_tree, features, label);
+		train_tree(features, label, dst_tree);
+	}
+}
+template<int max_stack_size=100>
+int count_dead_supply(int const start_id){
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = start_id;
+	int depth = 0;
+	double dead_node = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				if(node_id == start_id)
+					break;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+
+			//Count the number of data points
+			int count = 0;
+			for(int i = 0; i < label_count; ++i)
+				count += node.counters[i];
+			//Check if it's a dead node
+			if (count < 50)
+				dead_node += 1;
+
+			if(node_id == start_id)
+				break;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return dead_node;
+}
+double count_dead_supply_tree(int const tree_id){
+	int const root = tree_bases()[tree_id].root;
+	if(root < 0)
+		return 0;
+	return count_dead_supply(root);
+}
+template<int max_stack_size=100>
+int node_compress_tau(int const start_id, double const factor){
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = start_id;
+	int depth = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+				node.tau *= factor;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				if(node_id == start_id)
+					break;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+			node.tau *= factor;
+
+			if(node_id == start_id)
+				break;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return 0;
+}
+void tree_compress_tau(int const tree_id, double const factor){
+	int const root = tree_bases()[tree_id].root;
+	if(root < 0)
+		return;
+	node_compress_tau(root, factor);
+}
+template<int max_stack_size=100>
+int count_data_point_node(int const start_id){
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = start_id;
+	int depth = 0;
+	double sum = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				if(node_id == start_id)
+					break;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+
+			//Count the number of data points
+			for(int i = 0; i < label_count; ++i)
+				sum += node.counters[i];
+
+			if(node_id == start_id)
+				break;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	return sum;
+}
+int count_data_point_tree(int const tree_id){
+	int const root = tree_bases()[tree_id].root;
+	if(root < 0)
+		return 0;
+	return count_data_point_node(root);
+}
+template<int max_stack_size=100>
+int find_barycenter(int const start_id, double* avg_features){
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	int node_id = start_id;
+	int depth = 0;
+	double count[feature_count];
+	for(int i = 0; i < feature_count; ++i){
+		count[i] = 0;
+		avg_features[i] = 0;
+	}
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	//*i* count the number of node deleted.
+	int i = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				if(node_id == start_id)
+					break;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+
+			//Count the number of data points
+			double data_point_count = 0;
+			for(int i = 0; i < label_count; ++i)
+				data_point_count += static_cast<double>(node.counters[i]);
+			for(int i = 0; i < feature_count; ++i){
+				double const middle = (node.bound_upper[i] + node.bound_lower[i]) * 0.5;
+				avg_features[i] += middle * data_point_count;
+				count[i] += data_point_count;
+			}
+
+			if(node_id == start_id)
+				break;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -1;
+	for(int i = 0; i < feature_count; ++i){
+		avg_features[i] /= count[i];
+	}
+	return 0;
+}
+private:
+void cut_block(int const node_id, int const tree_id){
+	Node& node = nodes()[node_id];
+	Node& parent = nodes()[node.parent];
+	int sibling_id;
+	if(parent.child_right == node_id)
+		sibling_id = parent.child_left;
+	else
+		sibling_id = parent.child_right;
+	Node& sibling = nodes()[sibling_id];
+
+	if(parent.parent == -1){ //Place the other sibling as root (behead)
+		parent.reset();
+		node_available += 1;
+		node_reset(node_id);
+		//Cut off node and everything below
+		tree_bases()[tree_id].root = sibling_id;
+		sibling.parent = Node::EMPTY_NODE;
+		return;
+	}
+	Node& grandparent = nodes()[parent.parent];
+	int rem_count_id = parent.parent;
+	if(grandparent.child_right == node.parent)
+		grandparent.child_right = sibling_id;
+	else
+		grandparent.child_left = sibling_id;
+	sibling.parent = parent.parent;
+	node_available += 1;
+	parent.reset();
+	//TODO remove the counters?
+	node_reset(node_id);
+}
+void split_leaf(int const node_id, int const tree_id, bool const proportianal = false){
+	if(node_available < 2)
+		return;
+	Node& node = nodes()[node_id];
+	double probabilities[feature_count];
+	double sum = 0;
+	for(int i = 0; i < feature_count; ++i){
+		probabilities[i] = node.bound_upper[i] - node.bound_lower[i];
+		sum += probabilities[i];
+	}
+	Utils::turn_array_into_probability(probabilities, feature_count, sum);
+	//sample features with probability proportional to e_lower[i] + e_upper[i]
+	int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+
+	//Select the bound to choose the split from
+	double lower_value = node.bound_lower[dimension], upper_value = node.bound_upper[dimension];
+
+	//sample the split between [lower_value, upper_value]
+	double const random_value = func::rand_uniform();
+	double const split_value = random_value*(upper_value - lower_value) + lower_value;
+	node.split_dimension = dimension;
+	node.split_value = split_value;
+
+	double const E_right = func::rand_uniform()*(lifetime-node.tau);
+	double const E_left = func::rand_uniform()*(lifetime-node.tau);
+	int cright, cleft;
+	cright = available_node();
+	nodes()[cright].tau = node.tau + E_right;
+	cleft = available_node();
+	nodes()[cleft].tau = node.tau + E_left;
+	node_available -= 2;
+
+	Node &righty = nodes()[cright];
+	Node &lefty = nodes()[cleft];
+
+	//Set the box for the new children
+	for(int i = 0; i < feature_count; ++i){
+		righty.bound_lower[i] = lefty.bound_lower[i] = node.bound_lower[i];
+		righty.bound_upper[i] = lefty.bound_upper[i] = node.bound_upper[i];
+	}
+	lefty.bound_upper[dimension] = split_value;
+	righty.bound_lower[dimension] = split_value;
+	//NOTE no need to propagate since we only split on leaves
+
+	//NOTE Creates counters for the label of the new parent
+	//for(int i = 0; i < label_count; ++i)
+	//nodes[new_parent].counters[i] = node.counters[i];
+	//nodes[new_parent].counters[label] += 1;
+
+	//Creates counters for the label of the new sibling
+	double split_proportions_a = proportianal ? 0.5 : random_value;
+	double split_proportions_b = 1 - split_proportions_a;
+	for(int i = 0; i < label_count; ++i){
+
+		lefty.counters[i] = static_cast<int>(static_cast<double>(node.counters[i]) * split_proportions_a);
+		righty.counters[i] = static_cast<int>(static_cast<double>(node.counters[i]) * split_proportions_b);
+		if(lefty.counters[i] + righty.counters[i] != node.counters[i]){
+			int err = Utils::abs(lefty.counters[i] + righty.counters[i] - node.counters[i]);
+			if(func::rand_uniform() < 0.5)
+				lefty.counters[i] += err;
+			else
+				righty.counters[i] += err;
+		}
+	}
+	lefty.parent = node_id;
+	righty.parent = node_id;
+	node.child_right = cright;
+	node.child_left = cleft;
+
+}
 /**
  * Given a node, apply the sample algorithm described in the Mondrian paper..
  * @param node_id The index of the node in the array *nodes*.
@@ -400,7 +1971,7 @@ void extend_block0(int const node_id, int const tree_id, feature_type const* fea
  * @param label The label of the new data  point.
  */
 void sample_block(int const node_id, feature_type const* features, int const label){
-	Node& node = nodes()[node_id];	
+	Node& node = nodes()[node_id];
 	//Set the box of the node node_id
 	for(int i = 0; i < feature_count; ++i){
 		node.bound_lower[i] = features[i];
@@ -422,33 +1993,46 @@ void sample_block(int const node_id, feature_type const* features, int const lab
 bool train_tree(feature_type const* features, int const label, int const tree_id){
 	int root_id;
 	TreeBase& base = tree_bases()[tree_id];
+	bool ret = true;
 #ifdef DEBUG
 	cout << "Training Tree " << tree_id << endl;
 #endif
 	if (base.is_empty()){ //The root of the tree does not exist yet
 		//Pick a new node
 		root_id = available_node();
+		if(root_id >= 0){
+			//Initialize this node as the root for this tree
+			tree_bases()[tree_id].root = root_id;
+			Node& root = nodes()[root_id];
+			///TODO to change in order to separate node from forest
+			root.parent = -1;
+			root.child_right = -1;
+			root.child_left = -1;
+			root.tau = 0;
 
-		//Initialize this node as the root for this tree
-		tree_bases()[tree_id].root = root_id;
-		Node& root = nodes()[root_id]; 
-		///TODO to change in order to separate node from forest
-		root.parent = -1;
-		root.child_right = -1;
-		root.child_left = -1;
-		root.tau = 0;
+			node_available -= 1;
 
-		node_available -= 1;
-
-		//Sample the root with the new data point
-		sample_block(root_id, features, label);
-		base.statistics.increase_error();
+			//Sample the root with the new data point
+			sample_block(root_id, features, label);
+			base.statistics.increase_error();
+		}
+		else{
+			ret = false;
+		}
 	}
 	else{ //Partial fit
 		root_id = base.root;
-		extend_block(root_id, tree_id, features, label);
+		//add the sum of forced_extend, or the total_count
+		int summy = 0;
+		if(fe_split_trigger == SPLIT_TRIGGER_TOTAL)
+			summy = total_count;
+		else if(fe_split_trigger == SPLIT_TRIGGER_SFE)
+			summy = count_fe_down(base.root, features);
+
+		extend_block4(root_id, tree_id, features, label, summy);
+		//extend_block0(root_id, tree_id, features, label);
 	}
-	return true;
+	return ret;
 }
 /**
  * Compute the posterior mean at a node based on the posterior mean of its parent.
@@ -485,11 +2069,14 @@ void compute_posterior_mean(Node const& node, double *posterior_mean) const{
  * @param tree_id The id of the tree which is an index between 0 and tree_count.
  * @param posterior_mean An array in the size of label_count, that will hold the posterior means.
  */
-void predict_tree(feature_type const* features, int const tree_id, double* posterior_means) const{
+void predict_tree(feature_type const* features, int const tree_id, double* posterior_means, int const depth_limit = -1) const{
 	int node_id = tree_bases()[tree_id].root;
+	int depth = 0;
 	for(int i = 0; i < label_count; ++i)
 		posterior_means[i] = base_measure;
 
+	if(node_id == -1) //The tree is empty. just return.
+		return;
 	double pp_sum = 0, pp_mul = 1;
 	double probability_of_branching;
 	double probability_not_separated_yet = 1;
@@ -500,7 +2087,7 @@ void predict_tree(feature_type const* features, int const tree_id, double* poste
 	//Find the corresponding leaf for the data point
 	while(node_id >= 0 && node_id < node_count) {
 		Node const& current_node = nodes()[node_id];
-		
+
 		double const delta_tau = current_node.tau - parent_tau;
 		double eta = 0;
 		for(int i = 0; i < feature_count; ++i)
@@ -521,7 +2108,7 @@ void predict_tree(feature_type const* features, int const tree_id, double* poste
 
 			for(int l = 0; l < label_count; ++l){
 				//posterior_means of the parent of current_node
-				double const posterior_mean = (1/c_sum) * (c[l] - new_node_discount * c[l] + c_sum * posterior_means[l]); 
+				double const posterior_mean = (1/c_sum) * (c[l] - new_node_discount * c[l] + c_sum * posterior_means[l]);
 				//Note that *posterior_mean* is the value for the hypothetical parent
 				smoothed_posterior_means[l] += probability_not_separated_yet * probability_of_branching * posterior_mean;
 			}
@@ -531,7 +2118,8 @@ void predict_tree(feature_type const* features, int const tree_id, double* poste
 		compute_posterior_mean(current_node, posterior_means);
 
 		//If we reach a leaf, and *posterior_means* will be set to the value for this leaf.
-		if(current_node.is_leaf()){
+		bool too_deep = (depth+1 >= depth_limit) && (depth_limit >= 0);
+		if(too_deep || current_node.is_leaf()){
 			for(int l = 0; l < label_count; ++l)
 				posterior_means[l] = smoothed_posterior_means[l] + probability_not_separated_yet * (1 - probability_of_branching) * posterior_means[l];
 			break;
@@ -543,70 +2131,7 @@ void predict_tree(feature_type const* features, int const tree_id, double* poste
 			node_id = current_node.child_left;
 		else
 			node_id = current_node.child_right;
-	}
-}
-void predict_tree_pre_leaf(feature_type const* features, int const tree_id, double* posterior_means) const{
-	int node_id = tree_bases()[tree_id].root;
-	for(int i = 0; i < label_count; ++i)
-		posterior_means[i] = base_measure;
-
-	double pp_sum = 0, pp_mul = 1;
-	double probability_of_branching;
-	double probability_not_separated_yet = 1;
-	double parent_tau = 0;
-
-	double smoothed_posterior_means[label_count] = {0};
-
-	//Find the corresponding leaf for the data point
-	while(node_id >= 0 && node_id < node_count) {
-		Node const& current_node = nodes()[node_id];
-		
-		double const delta_tau = current_node.tau - parent_tau;
-		double eta = 0;
-		for(int i = 0; i < feature_count; ++i)
-			eta += Utils::max(features[i] - current_node.bound_upper[i], 0.0) + Utils::max(current_node.bound_lower[i] - features[i], 0.0);
-
-		probability_of_branching = 1 - func::exp(-delta_tau * eta);
-
-		if(probability_of_branching > 0){
-			double const new_node_discount = (eta / (eta + discount_factor)) *
-											-Utils::expm1<func>(-(eta + discount_factor) * delta_tau) / -Utils::expm1<func>(-(eta * delta_tau));
-			double c[label_count];
-			double c_sum = 0;
-			//We need the sum of *c*, so we need two loops
-			for(int l = 0; l < label_count; ++l){
-				c[l] = Utils::min(current_node.counters[l], 1);
-				c_sum += c[l];
-			}
-
-			for(int l = 0; l < label_count; ++l){
-				//posterior_means of the parent of current_node
-				double const posterior_mean = (1/c_sum) * (c[l] - new_node_discount * c[l] + c_sum * posterior_means[l]); 
-				//Note that *posterior_mean* is the value for the hypothetical parent
-				smoothed_posterior_means[l] += probability_not_separated_yet * probability_of_branching * posterior_mean;
-			}
-		}
-
-		//NOTE: *posterior_means* cannot be update before we need the parent value above
-		compute_posterior_mean(current_node, posterior_means);
-
-		//If we reach a leaf, and *posterior_means* will be set to the value for this leaf.
-		if(current_node.is_leaf()){
-			for(int l = 0; l < label_count; ++l)
-				posterior_means[l] = smoothed_posterior_means[l] + probability_not_separated_yet * (1 - probability_of_branching) * posterior_means[l];
-			break;
-		}
-		probability_not_separated_yet *= (1 - probability_of_branching);
-
-		//Otherwise, the child is picked based on the split of the node
-		Node const& cright = nodes()[current_node.child_right];
-		Node const& cleft = nodes()[current_node.child_left];
-		if(cright.is_leaf() && cleft.is_leaf())
-			break;
-		if(features[current_node.split_dimension] <= current_node.split_value)
-			node_id = current_node.child_left;
-		else
-			node_id = current_node.child_right;
+		depth += 1;
 	}
 }
 /**
