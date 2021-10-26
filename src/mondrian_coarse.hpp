@@ -214,27 +214,29 @@ private:
 
 unsigned char buffer[max_size];
 
-#ifdef DEBUG
 unsigned int total_count = 0;
-#endif
+
+double count_direction = 0;
+double sum_direction = 0;
+int count_full = 0;
+
 int last_tree_deleted = -1;
 int node_usage_on_ltd = 0;
 //The number of nodes
 int node_count = 0;
 int node_available = 0;
 //The number of trees
-int tree_count = 0;	
+int tree_count = 0;
 int maximum_tree_count = 0;
-double pcdm = 0;
-double pcdm_upper_bound = 60;
-double pcdm_lower_bound = 55;
-double pcdm_fading_factor = 0.95;
 //The lifetime parameter
 double lifetime;
 //The base measure parameter
 double base_measure;
 //The discount factor parameter
 double discount_factor;
+double sum_features[feature_count];
+double count_points = 0;
+double fading_count = 1;
 
 Node* nodes() {
 	return reinterpret_cast<Node*>(buffer);
