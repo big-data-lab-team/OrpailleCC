@@ -151,6 +151,7 @@ struct MondrianNode{
 #define EXTEND_UPDATE_WHEN_NO_SPLIT 2
 #define EXTEND_COUNTER_NO_UPDATE 3
 #define EXTEND_BARYCENTER 4
+
 /**
 * MondrianForest class implements the Mondrian Forest classifier.
 * Templates:
@@ -2174,13 +2175,6 @@ void update_posterior_count(void){
 	for(int i = 0; i < tree_count; ++i)
 		if(!bases[i].is_empty())
 			update_posterior_count(bases[i].root);
-}
-void update_posterior_count1(void){
-	//For each tree, run the recursive *update_posterior_count* on the root
-	TreeBase* bases = tree_bases();
-	for(int i = 0; i < tree_count; ++i)
-		if(!bases[i].is_empty())
-			update_posterior_count1(bases[i].root);
 }
 double average_tree_size(void) const{
 	double sum = 0;
