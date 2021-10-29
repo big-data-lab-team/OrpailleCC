@@ -2041,8 +2041,16 @@ bool train_tree(feature_type const* features, int const label, int const tree_id
 		else if(fe_split_trigger == SPLIT_TRIGGER_SFE)
 			summy = count_fe_down(base.root, features);
 
-		extend_block4(root_id, tree_id, features, label, summy);
-		//extend_block0(root_id, tree_id, features, label);
+		if(extend_type == EXTEND_ORIGINAL)
+			extend_block0(root_id, tree_id, features, label);
+		else if(extend_type == EXTEND_UPDATE_WHEN_NO_SPLIT)
+			extend_block2(root_id, tree_id, features, label);
+		else if(extend_type == EXTEND_GHOST)
+			extend_block1(root_id, tree_id, features, label);
+		else if(extend_type == EXTEND_COUNTER_NO_UPDATE)
+			extend_block3(root_id, tree_id, features, label);
+		else if(extend_type == EXTEND_BARYCENTER)
+			extend_block4(root_id, tree_id, features, label, summy);
 	}
 	return ret;
 }
@@ -3382,7 +3390,8 @@ int predict(feature_type const* features, double* scores = nullptr, int tree_to_
 	if(tree_to_use < 0)
 		tree_to_use = tree_count;
 	//Update internal count
-	update_posterior_count();
+	if(extend_type == EXTEND_ORIGINAL || extend_type == EXTEND_BARYCENTER || extend_type == EXTEND_COUNTER_NO_UPDATE || extend_type == EXTEND_UPDATE_WHEN_NO_SPLIT)
+		update_posterior_count();
 
 	//The posterior mean of the forest will be the average posterior means over all trees
 	//We start by computing the sum
