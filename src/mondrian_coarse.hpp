@@ -28,6 +28,8 @@ struct MondrianNode{
 	int counters[label_count];
 	//Counter of element that should have been out of the box, but couldn't because of lack of memory
 	int forced_extend;
+	//Contain a score for the node.
+	double fading_score;
 
 	/**
 	 * Constuctor
@@ -51,6 +53,7 @@ struct MondrianNode{
 		tau = EMPTY_NODE;
 		parent = EMPTY_NODE;
 		forced_extend = 0;
+		fading_score = 0;
 	}
 	bool has_parent(void) const{
 		return parent != EMPTY_NODE;
