@@ -652,7 +652,7 @@ void extend_block1(int const node_id, int const tree_id, feature_type const* fea
 			node.counters[label] += 1;
 		}
 	}
-	else{
+	else{ //Split but no more node
 		node.counters[label] += 1;
 	}
 }
