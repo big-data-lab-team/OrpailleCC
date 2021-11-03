@@ -155,6 +155,11 @@ struct MondrianNode{
 #define EXTEND_COUNTER_NO_UPDATE 3
 #define EXTEND_BARYCENTER 4
 
+#define TRIM_NONE 0
+#define TRIM_RANDOM 1
+#define TRIM_FADING 2
+
+
 /**
 * MondrianForest class implements the Mondrian Forest classifier.
 * Templates:
@@ -186,6 +191,7 @@ bool const reset_once;
 double const fe_parameter;
 int const split_helper;
 int const extend_type;
+int const trim_type;
 
 //The node structure
 	public:
@@ -2886,7 +2892,8 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 		double const fep = 1.0,
 		double const fc = 1.0,
 		int const sh = 0,
-		int const et = 0): tree_management(tm), size_type(st), size_limit(sl), dont_delete(dd), print_nodes(pn), fe_distribution(fed), fe_split_trigger(fes), tau_factor(tf), generate_full_point(fdt), reset_once(ro), fe_parameter(fep), fading_count(fc), split_helper(sh), extend_type(et) {
+		int const et = 0,
+		int const tt = 0): tree_management(tm), size_type(st), size_limit(sl), dont_delete(dd), print_nodes(pn), fe_distribution(fed), fe_split_trigger(fes), tau_factor(tf), generate_full_point(fdt), reset_once(ro), fe_parameter(fep), fading_count(fc), split_helper(sh), extend_type(et), trim_type(tt) {
 #ifdef DEBUG
 	assert(tree_count >= 1 && "Must have one tree at least");
 #endif
@@ -3420,5 +3427,4 @@ Node* get_nodes(){
 TreeBase* get_bases(){
 	return tree_bases();
 }
-
 };
