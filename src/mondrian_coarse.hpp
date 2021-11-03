@@ -158,6 +158,7 @@ struct MondrianNode{
 #define TRIM_NONE 0
 #define TRIM_RANDOM 1
 #define TRIM_FADING 2
+#define TRIM_COUNT 3
 
 
 /**
@@ -2555,6 +2556,8 @@ void tree_reshape(){
 	tree_split();
 }
 void tree_trim(){
+	if(trim_type == TRIM_NONE)
+		return;
 	for(int i = 0; i < tree_count; ++i){
 		int id = tree_trim(i);
 		if(tree_bases()[i].root != id) //Can't cut the root
@@ -2575,10 +2578,11 @@ int tree_trim(int const tree_id){
 	//Start at the root, then dive inside the tree
 	int node_id = root_id;
 	int depth = 0;
-	int smallest_count = total_count, smallest_id = 0;
+	double smallest_count = total_count;
+	int smallest_id = 0;
 	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
-	//*i* count the number of node deleted.
 	int i = 0;
+	double leaf_count = 0;
 	while(i < node_count && node_id >= 0){
 		Node& node = nodes()[node_id];
 		if(!node.is_leaf()){  //Internal node
@@ -2603,12 +2607,26 @@ int tree_trim(int const tree_id){
 			stack[depth] = -1; //Reset to -1
 			depth -= 1;
 			i += 1;
-			int count = 0;
-			for(int i = 0; i < label_count; ++i)
-				count += node.counters[i];
-			if(count < smallest_count || (count == smallest_count && func::rand_uniform() < 0.5)){
-				smallest_count = count;
-				smallest_id = node_id;
+			leaf_count += 1;
+			if(trim_type == TRIM_COUNT){//Trim based on count
+				double count = 0;
+				for(int i = 0; i < label_count; ++i)
+					count += static_cast<double>(node.counters[i]);
+				if(count < smallest_count || (count == smallest_count && func::rand_uniform() < 0.5)){
+					smallest_count = count;
+					smallest_id = node_id;
+				}
+			}
+			else if(trim_type == TRIM_FADING){//Trim based on count
+				if(node.fading_score < smallest_count || (node.fading_score == smallest_count && func::rand_uniform() < 0.5)){
+					smallest_count = node.fading_score;
+					smallest_id = node_id;
+				}
+			}
+			else if(trim_type == TRIM_RANDOM){//Trim based on count
+				double const r = func::rand_uniform();
+				if(r < 1.0/leaf_count)
+					smallest_id = node_id;
 			}
 			node_id = node.parent;
 		}
