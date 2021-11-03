@@ -64,11 +64,11 @@ class Utils{
 	}
 	//An inline function that compute the minimum between two numbers
 	template<class T>
-	inline static bool min(T const a, T const b){
+	inline static T min(T const a, T const b){
 		return (a < b ? a : b);
 	}
 	template<class T>
-	inline static bool max(T const a, T const b){
+	inline static T max(T const a, T const b){
 		return (a > b ? a : b);
 	}
 	template<class func>
@@ -78,5 +78,26 @@ class Utils{
 	template<class T>
 	inline static double div_int(int const a, int const b){
 		return (a - (a % b)) / b;
+	}
+	template<class func, class T>
+	inline static void shuffle(T* array, int const size){
+		for(int i = size-1; i > 0; --i){
+			T tmp = array[i];
+			int swap_idx = static_cast<int>(func::rand_uniform()*static_cast<double>(i));
+			array[i] = array[swap_idx];
+			array[swap_idx] = tmp;
+		}
+	}
+	template<class T>
+	inline static T abs(T const v){
+		if(v < 0)
+			return -1 * v;
+		return v;
+	}
+	template<class T>
+	inline static int round(T const v){
+		if(v < 0)
+			return static_cast<int>(v-0.5);
+		return static_cast<int>(v+0.5);
 	}
 };
