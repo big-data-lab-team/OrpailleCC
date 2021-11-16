@@ -1895,6 +1895,94 @@ int find_barycenter(int const start_id, double* avg_features){
 	}
 	return 0;
 }
+void tree_trim(){
+	if(trim_type == TRIM_NONE)
+		return;
+	for(int i = 0; i < tree_count; ++i){
+		int id = tree_trim(i);
+		if(tree_bases()[i].root != id && id >= 0 && id < node_count) //Can't cut the root
+			cut_block(id, i);
+	}
+}
+template<int max_stack_size=100>
+int tree_trim(int const tree_id){
+	TreeBase const& base = tree_bases()[tree_id];
+	int const root_id = base.root;
+
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	//Start at the root, then dive inside the tree
+	int node_id = root_id;
+	int depth = 0;
+	double smallest_count = -1;
+	int smallest_id = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	int i = 0;
+	double leaf_count = 0;
+	double sum_count_leaves = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+			leaf_count += 1;
+			if(trim_type == TRIM_COUNT){//Trim based on count
+				double count = 0;
+				for(int i = 0; i < label_count; ++i)
+					count += static_cast<double>(node.counters[i]);
+				sum_count_leaves += count;
+				if(smallest_count < 0 || count < smallest_count || (count == smallest_count && func::rand_uniform() < 0.5)){
+					smallest_count = count;
+					smallest_id = node_id;
+				}
+			}
+			else if(trim_type == TRIM_FADING){//Trim based on count
+				sum_count_leaves += node.fading_score;
+				if(smallest_count < 0 || node.fading_score < smallest_count || (node.fading_score == smallest_count && func::rand_uniform() < 0.5)){
+					smallest_count = node.fading_score;
+					smallest_id = node_id;
+				}
+			}
+			else if(trim_type == TRIM_RANDOM){//Trim based on count
+				double const r = func::rand_uniform();
+
+				if(r < (1.0/leaf_count))
+					smallest_id = node_id;
+			}
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	if(depth != -1)
+		return -2;
+	//if(trim_type != TRIM_RANDOM && sum_count_leaves > 0 && (smallest_count/sum_count_leaves) > minimun_trim_size)
+		//return -3;
+	return smallest_id;
+}
 private:
 void cut_block(int const node_id, int const tree_id){
 	Node& node = nodes()[node_id];
@@ -2571,88 +2659,6 @@ void tree_reshape(){
 	tree_trim();
 	tree_split();
 }
-void tree_trim(){
-	if(trim_type == TRIM_NONE)
-		return;
-	for(int i = 0; i < tree_count; ++i){
-		int id = tree_trim(i);
-		if(tree_bases()[i].root != id) //Can't cut the root
-			cut_block(id, i);
-	}
-}
-template<int max_stack_size=100>
-int tree_trim(int const tree_id){
-	TreeBase const& base = tree_bases()[tree_id];
-	int const root_id = base.root;
-
-	//Initialize an array to keep track of where we have to go at each tree level.
-	//The max depth expected is MAX_DEPTH.
-	int stack[max_stack_size];
-	for(int i = 0; i < max_stack_size; ++i)
-		stack[i] = -1;
-
-	//Start at the root, then dive inside the tree
-	int node_id = root_id;
-	int depth = 0;
-	double smallest_count = total_count;
-	int smallest_id = 0;
-	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
-	int i = 0;
-	double leaf_count = 0;
-	while(i < node_count && node_id >= 0){
-		Node& node = nodes()[node_id];
-		if(!node.is_leaf()){  //Internal node
-			if (stack[depth] == -1){ //Go right
-				stack[depth] = 0;
-				depth += 1;
-				node_id = node.child_right;
-			}
-			else if (stack[depth] == 0){ //Go left
-				stack[depth] = 1;
-				depth += 1;
-				node_id = node.child_left;
-			}
-			else if (stack[depth] == 1){ //Go up
-				stack[depth] = -1; //Reset to -1
-				depth -= 1;
-				i += 1;
-				node_id = node.parent;
-			}
-		}
-		else{ //Leaf
-			stack[depth] = -1; //Reset to -1
-			depth -= 1;
-			i += 1;
-			leaf_count += 1;
-			if(trim_type == TRIM_COUNT){//Trim based on count
-				double count = 0;
-				for(int i = 0; i < label_count; ++i)
-					count += static_cast<double>(node.counters[i]);
-				if(count < smallest_count || (count == smallest_count && func::rand_uniform() < 0.5)){
-					smallest_count = count;
-					smallest_id = node_id;
-				}
-			}
-			else if(trim_type == TRIM_FADING){//Trim based on count
-				if(node.fading_score < smallest_count || (node.fading_score == smallest_count && func::rand_uniform() < 0.5)){
-					smallest_count = node.fading_score;
-					smallest_id = node_id;
-				}
-			}
-			else if(trim_type == TRIM_RANDOM){//Trim based on count
-				double const r = func::rand_uniform();
-				if(r < 1.0/leaf_count)
-					smallest_id = node_id;
-			}
-			node_id = node.parent;
-		}
-		if(depth >= max_stack_size)
-			return -1;
-	}
-	if(depth != -1)
-		return -1;
-	return smallest_id;
-}
 void tree_split(){
 	for(int i = 0; i < tree_count; ++i){
 		int id = tree_split(i);
@@ -2999,6 +3005,9 @@ bool train(feature_type const* features, int const label){
 		//tree_order[i] = (total_count+i)%tree_count;
 		tree_order[i] = i;
 
+	if(trim_type != TRIM_NONE && node_available <= 1 && total_count%100 == 0){
+		tree_trim();
+	}
 	for(int i = 0; i < tree_count; ++i){
 		bool has_trained = train_tree(features, label, tree_order[i]);
 		if(!has_trained)
