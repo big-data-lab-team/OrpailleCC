@@ -257,6 +257,10 @@ double discount_factor;
 double sum_features[feature_count];
 double count_points = 0;
 double fading_count = 1;
+double nodes_fading_f = 0.995; //Fading factor of node
+double minimun_trim_size = 0.03;
+int has_been_full = 0;
+
 
 Node* nodes() {
 	return reinterpret_cast<Node*>(buffer);
@@ -410,6 +414,7 @@ void extend_block0(int const node_id, int const tree_id, feature_type const* fea
 		else{
 			//Update the counter of label
 			node.counters[label] += 1;
+			node.fading_score = 1 + node.fading_score * nodes_fading_f;
 		}
 	}
 }
@@ -534,6 +539,7 @@ void extend_block2(int const node_id, int const tree_id, feature_type const* fea
 		else{
 			//Update the counter of label
 			node.counters[label] += 1;
+			node.fading_score = 1 + node.fading_score * nodes_fading_f;
 		}
 	}
 }
@@ -658,10 +664,12 @@ void extend_block1(int const node_id, int const tree_id, feature_type const* fea
 		else{
 			//Update the counter of label
 			node.counters[label] += 1;
+			node.fading_score = 1 + node.fading_score * nodes_fading_f;
 		}
 	}
 	else{ //Split but no more node
 		node.counters[label] += 1;
+		node.fading_score = 1 + node.fading_score * nodes_fading_f;
 	}
 }
 //Increase counter but don't update box
@@ -786,6 +794,7 @@ void extend_block3(int const node_id, int const tree_id, feature_type const* fea
 	else{
 		//Update the counter of label
 		node.counters[label] += 1;
+		node.fading_score = 1 + node.fading_score * nodes_fading_f;
 	}
 }
 //Count forced extend
@@ -874,8 +883,10 @@ void extend_block4(int const node_id, int const tree_id, feature_type const* fea
 					has_split_bary = split_barycenter(node_id, tree_id, features, label, parent_id, parent_tau);
 			}
 			if(!has_split_bary){
+
 				//Update the counter of label
 				node.counters[label] += 1;
+				node.fading_score = 1 + node.fading_score * nodes_fading_f;
 			}
 		}
 	}
@@ -1506,7 +1517,9 @@ int pass_data_point_down(int const start_id, feature_type const* features, int c
 		else
 			node_id = node.child_left;
 	}
-	nodes()[node_id].counters[label] += 1;
+	Node& node = nodes()[node_id];
+	node.counters[label] += 1;
+	node.fading_score = 1 + node.fading_score * nodes_fading_f;
 	return node_id;
 }
 int count_fe_down(int const start_id, feature_type const* features) const{
@@ -2991,6 +3004,8 @@ bool train(feature_type const* features, int const label){
 		if(!has_trained)
 			fully_trained = false;
 	}
+	if(node_available <= 1)
+		has_been_full += 1;
 
 	//otter(features, label);
     #ifdef DEBUG
