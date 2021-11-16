@@ -149,11 +149,12 @@ struct MondrianNode{
 #define SPLIT_HELPER_AVG 1
 #define SPLIT_HELPER_WEIGHTED 2
 
-#define EXTEND_ORIGINAL 0
-#define EXTEND_GHOST 1
-#define EXTEND_UPDATE_WHEN_NO_SPLIT 2
-#define EXTEND_COUNTER_NO_UPDATE 3
-#define EXTEND_BARYCENTER 4
+#define EXTEND_NONE 0
+#define EXTEND_ORIGINAL 1
+#define EXTEND_GHOST 2
+#define EXTEND_PARTIAL_UPDATE 3
+#define EXTEND_COUNTER_NO_UPDATE 4
+#define EXTEND_BARYCENTER 5
 
 #define TRIM_NONE 0
 #define TRIM_RANDOM 1
@@ -2050,7 +2051,9 @@ bool train_tree(feature_type const* features, int const label, int const tree_id
 
 		if(extend_type == EXTEND_ORIGINAL)
 			extend_block0(root_id, tree_id, features, label);
-		else if(extend_type == EXTEND_UPDATE_WHEN_NO_SPLIT)
+		else if(extend_type == EXTEND_NONE && node_available <= 2)
+			ret = false;
+		else if(extend_type == EXTEND_PARTIAL_UPDATE)
 			extend_block2(root_id, tree_id, features, label);
 		else if(extend_type == EXTEND_GHOST)
 			extend_block1(root_id, tree_id, features, label);
@@ -3415,7 +3418,7 @@ int predict(feature_type const* features, double* scores = nullptr, int tree_to_
 	if(tree_to_use < 0)
 		tree_to_use = tree_count;
 	//Update internal count
-	if(extend_type == EXTEND_ORIGINAL || extend_type == EXTEND_BARYCENTER || extend_type == EXTEND_COUNTER_NO_UPDATE || extend_type == EXTEND_UPDATE_WHEN_NO_SPLIT)
+	if(extend_type != EXTEND_GHOST)
 		update_posterior_count();
 
 	//The posterior mean of the forest will be the average posterior means over all trees
