@@ -321,7 +321,6 @@ void extend_block0(int const node_id, int const tree_id, feature_type const* fea
 	}
 	else{
 		pause_expension = tree_bases()[tree_id].is_paused(tree_management);
-		pause_expension = total_count >= 20 && total_count < 150;
 	}
 
 	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !pause_expension){//Introduce a new parent and a new sibling
@@ -827,7 +826,7 @@ void extend_block4(int const node_id, int const tree_id, feature_type const* fea
 	else{
 		pause_expension = tree_bases()[tree_id].is_paused(tree_management);
 		//PAUSE
-		pause_expension = total_count >= 20 && total_count <= 150;
+		//pause_expension = ((total_count >= 20 && total_count <= 150));
 	}
 
 	if(E >= 0 && parent_tau + E < node.tau && node_available >= 2 && !pause_expension){//Introduce a new parent and a new sibling
@@ -879,7 +878,8 @@ void extend_block4(int const node_id, int const tree_id, feature_type const* fea
 		else{
 			bool has_split_bary = false;
 			//PAUSE
-			if((total_count < 20 || total_count >= 150) && E < 0 && node_available >= 2){//Data point in the box
+			//if(!((total_count >= 20 && total_count <= 150)) && E < 0 && node_available >= 2){//Data point in the box
+			if(has_been_full > 20 && E < 0 && node_available >= 2){//Data point in the box
 					has_split_bary = split_barycenter(node_id, tree_id, features, label, parent_id, parent_tau);
 			}
 			if(!has_split_bary){
