@@ -258,7 +258,7 @@ double sum_features[feature_count];
 double count_points = 0;
 double fading_count = 1;
 double nodes_fading_f = 0.995; //Fading factor of node
-double minimun_trim_size = 0.03;
+double maximum_trim_size = 1.00;
 int has_been_full = 0;
 
 
@@ -1979,8 +1979,8 @@ int tree_trim(int const tree_id){
 	}
 	if(depth != -1)
 		return -2;
-	//if(trim_type != TRIM_RANDOM && sum_count_leaves > 0 && (smallest_count/sum_count_leaves) > minimun_trim_size)
-		//return -3;
+	if(trim_type != TRIM_RANDOM && sum_count_leaves > 0 && (smallest_count/sum_count_leaves) > minimun_trim_size)
+		return -3;
 	return smallest_id;
 }
 private:
@@ -2933,7 +2933,8 @@ CoarseMondrianForest(double const lifetime, double const base_measure, double co
 		double const fc = 1.0,
 		int const sh = 0,
 		int const et = 0,
-		int const tt = 0): tree_management(tm), size_type(st), size_limit(sl), dont_delete(dd), print_nodes(pn), fe_distribution(fed), fe_split_trigger(fes), tau_factor(tf), generate_full_point(fdt), reset_once(ro), fe_parameter(fep), fading_count(fc), split_helper(sh), extend_type(et), trim_type(tt) {
+		int const tt = 0,
+		double const mts = 1.0): tree_management(tm), size_type(st), size_limit(sl), dont_delete(dd), print_nodes(pn), fe_distribution(fed), fe_split_trigger(fes), tau_factor(tf), generate_full_point(fdt), reset_once(ro), fe_parameter(fep), fading_count(fc), split_helper(sh), extend_type(et), trim_type(tt), maximum_trim_size(mts) {
 #ifdef DEBUG
 	assert(tree_count >= 1 && "Must have one tree at least");
 #endif
