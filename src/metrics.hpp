@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 template<bool use_ratio=false>
 class ErrorMetrics{
 	int count = 0;
@@ -28,6 +28,20 @@ class ErrorMetrics{
 	}
 	bool ratio(void) const{
 		return use_ratio;
+	}
+};
+class NoMetrics{
+	public:
+	void update(int const true_label, int const prediction){
+	}
+	double score(bool const invert=false, int const tree_size=-1) const{
+		return 0;
+	}
+	void increase_error(int const c=1){ }
+	void reset(){
+	}
+	bool ratio(void) const{
+		return false;
 	}
 };
 template<int label_count, bool use_ratio=false>
