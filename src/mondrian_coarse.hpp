@@ -1981,7 +1981,7 @@ int tree_trim(int const tree_id){
 	}
 	if(depth != -1)
 		return -2;
-	if(trim_type != TRIM_RANDOM && sum_count_leaves > 0 && (smallest_count/sum_count_leaves) > minimun_trim_size)
+	if(trim_type != TRIM_RANDOM && sum_count_leaves > 0 && (smallest_count/sum_count_leaves) > maximum_trim_size)
 		return -3;
 	return smallest_id;
 }
