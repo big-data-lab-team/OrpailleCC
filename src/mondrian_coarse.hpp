@@ -2917,7 +2917,7 @@ bool train(feature_type const* features, int const label){
 
 	static bool checked = false;
 	if(has_been_full > 1 && !checked){
-		cout << "Full memory!" << endl;
+		//cout << "Full memory!" << endl;
 		checked = true;
 	}
 	//Fade the count of the average point
