@@ -106,7 +106,7 @@ class MondrianForest{
 	//The discount factor parameter
 	double discount_factor;
 	/**
-	 *	Return the index of an empty node. 
+	 *	Return the index of an empty node.
 	 */
 	int available_node(void) const{
 		for(int i = 0; i < MAX_NODE; ++i)
@@ -125,7 +125,7 @@ class MondrianForest{
 		//e_lower and e_upper are used to compute probabilities
 		feature_type e_lower[feature_count], e_upper[feature_count];
 		double probabilities[feature_count];
-		Node& node = nodes[node_id];	
+		Node& node = nodes[node_id];
 		int const parent_id = node.parent;
 		double const parent_tau = node.parent >= 0 ? nodes[node.parent].tau : 0; //The tau value of the parent of the root is 0
 		//sum is used as a parameter to pick random numbers following exponential law
@@ -143,7 +143,7 @@ class MondrianForest{
 		if(E >= 0 && parent_tau + E < node.tau){//Introduce a new parent and a new sibling
 			Utils::turn_array_into_probability(probabilities, feature_count, sum);
 			//sample features with probability proportional to e_lower[i] + e_upper[i]
-			int const dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
+			int dimension = Utils::pick_from_distribution<func>(probabilities, feature_count);
 			if(dimension >= feature_count || dimension < 0){
 				dimension = static_cast<int>(func::rand_uniform() * static_cast<double>(feature_count));
 			}
@@ -158,7 +158,7 @@ class MondrianForest{
 				lower_value = features[dimension];
 				upper_value = node.bound_lower[dimension];
 			}
-			
+
 			//sample the split between [lower_value, upper_value]
 			double const split_value = func::rand_uniform()*(upper_value - lower_value) + lower_value;
 			int new_parent, new_sibling;
@@ -197,7 +197,7 @@ class MondrianForest{
 						if(parent.child_left == node_id)
 							parent.child_left = new_parent;
 						else
-							parent.child_right = new_parent; 
+							parent.child_right = new_parent;
 					}
 
 
@@ -231,9 +231,9 @@ class MondrianForest{
 			//update lower bound and upper bound of this node
 			for(int i = 0; i < feature_count; ++i){
 				if(node.bound_lower[i] > features[i])
-					node.bound_lower[i] = features[i]; 
+					node.bound_lower[i] = features[i];
 				if(node.bound_upper[i] < features[i])
-					node.bound_upper[i] = features[i]; 
+					node.bound_upper[i] = features[i];
 			}
 			//if not leaf, recurse on the node that contains the data point
 			if(!node.is_leaf()){
@@ -257,7 +257,7 @@ class MondrianForest{
 	 * @param label The label of the new data  point.
 	 */
 	void sample_block(int const node_id, feature_type const* features, int const label){
-		Node& node = nodes[node_id];	
+		Node& node = nodes[node_id];
 		//Set the box of the node node_id
 		for(int i = 0; i < feature_count; ++i){
 			node.bound_lower[i] = features[i];
@@ -284,7 +284,7 @@ class MondrianForest{
 
 			//Initialize this node as the root for this tree
 			roots[tree_id] = root_id;
-			Node& root = nodes[root_id]; 
+			Node& root = nodes[root_id];
 			root.parent = -1;
 			root.child_right = -1;
 			root.child_left = -1;
@@ -348,7 +348,7 @@ class MondrianForest{
 		//Find the corresponding leaf for the data point
 		while(node_id != EMPTY_NODE) {
 			Node const& current_node = nodes[node_id];
-			
+
 			double const delta_tau = current_node.tau - parent_tau;
 			double eta = 0;
 			for(int i = 0; i < feature_count; ++i)
@@ -369,7 +369,7 @@ class MondrianForest{
 
 				for(int l = 0; l < label_count; ++l){
 					//posterior_means of the parent of current_node
-					double const posterior_mean = (1/c_sum) * (c[l] - new_node_discount * c[l] + c_sum * posterior_means[l]); 
+					double const posterior_mean = (1/c_sum) * (c[l] - new_node_discount * c[l] + c_sum * posterior_means[l]);
 					//Note that *posterior_mean* is the value for the hypothetical parent
 					smoothed_posterior_means[l] += probability_not_separated_yet * probability_of_branching * posterior_mean;
 				}
@@ -436,7 +436,7 @@ class MondrianForest{
 		this->lifetime = lifetime;
 		this->base_measure = base_measure;
 		this->discount_factor = discount_factor;
-		//Init all roots as empty 
+		//Init all roots as empty
 		for(int i = 0; i < tree_count; ++i)
 			roots[i] = EMPTY_NODE;
 	}
