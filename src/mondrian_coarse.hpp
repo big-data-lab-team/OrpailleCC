@@ -254,9 +254,9 @@ double lifetime;
 double base_measure;
 //The discount factor parameter
 double discount_factor;
-double sum_features[feature_count];
-double count_points = 0;
-double fading_count = 1;
+double sum_features[feature_count]; //Sum of all data points
+double count_points = 0; // count of points for the average point
+double fading_count = 1;//fading factor for the average point
 double nodes_fading_f = 0.995; //Fading factor of node
 double maximum_trim_size = 1.00;
 int has_been_full = 0;
@@ -280,9 +280,14 @@ TreeBase const* tree_bases() const{
 int available_node(void) const{
 	if(node_available == 0)
 		return -1;
-	for(int i = 0; i < node_count; ++i)
-		if(nodes()[i].available())
-			return i;
+	static int last_returned_node = 0;
+	for(int i = 0; i < node_count; ++i){
+		int const node_id = (i + last_returned_node) % node_count;
+		if(nodes()[node_id].available()){
+			last_returned_node = node_id;
+			return node_id;
+		}
+	}
 	return -1;
 }
 /**
@@ -359,9 +364,9 @@ void extend_block0(int const node_id, int const tree_id, feature_type const* fea
 			nodes()[new_parent].bound_upper[i] = features[i] > node.bound_upper[i] ? features[i] : node.bound_upper[i];
 		}
 		//NOTE Creates counters for the label of the new parent
-		//for(int i = 0; i < label_count; ++i)
-		//nodes[new_parent].counters[i] = node.counters[i];
-		//nodes[new_parent].counters[label] += 1;
+		for(int i = 0; i < label_count; ++i)
+			nodes()[new_parent].counters[i] = Utils::min(1, node.counters[i]);
+		//nodes()[new_parent].counters[label] = 1 + Utils::min(1, node.counters[label]);
 
 		//Creates counters for the label of the new sibling
 		for(int i = 0; i < label_count; ++i)
@@ -392,6 +397,7 @@ void extend_block0(int const node_id, int const tree_id, feature_type const* fea
 			nodes()[new_parent].child_left = new_sibling;
 			nodes()[new_parent].child_right = node_id;
 		}
+		//cout << "Split dimension " << dimension << " on " << split_value << "(total count: " << total_count << ")" << endl;
 
 		sample_block(new_sibling, features, label);
 	}
@@ -415,7 +421,7 @@ void extend_block0(int const node_id, int const tree_id, feature_type const* fea
 		else{
 			//Update the counter of label
 			node.counters[label] += 1;
-			node.fading_score = 1 + node.fading_score * nodes_fading_f;
+			node.fading_score += 1; //fading_score is decreased later on
 		}
 	}
 }
@@ -540,7 +546,7 @@ void extend_block2(int const node_id, int const tree_id, feature_type const* fea
 		else{
 			//Update the counter of label
 			node.counters[label] += 1;
-			node.fading_score = 1 + node.fading_score * nodes_fading_f;
+			node.fading_score += 1; //fading_score is decreased later
 		}
 	}
 }
@@ -665,12 +671,12 @@ void extend_block1(int const node_id, int const tree_id, feature_type const* fea
 		else{
 			//Update the counter of label
 			node.counters[label] += 1;
-			node.fading_score = 1 + node.fading_score * nodes_fading_f;
+			node.fading_score += 1; //fading_score is decreased later
 		}
 	}
 	else{ //Split but no more node
 		node.counters[label] += 1;
-		node.fading_score = 1 + node.fading_score * nodes_fading_f;
+		node.fading_score += 1; //fading_score is decreased later
 	}
 }
 //Increase counter but don't update box
@@ -795,7 +801,7 @@ void extend_block3(int const node_id, int const tree_id, feature_type const* fea
 	else{
 		//Update the counter of label
 		node.counters[label] += 1;
-		node.fading_score = 1 + node.fading_score * nodes_fading_f;
+		node.fading_score += 1; //fading_score is decreased later
 	}
 }
 //Count forced extend
@@ -888,7 +894,7 @@ void extend_block4(int const node_id, int const tree_id, feature_type const* fea
 
 				//Update the counter of label
 				node.counters[label] += 1;
-				node.fading_score = 1 + node.fading_score * nodes_fading_f;
+				node.fading_score += 1; //fading_score is decreased later
 			}
 		}
 	}
@@ -1521,7 +1527,7 @@ int pass_data_point_down(int const start_id, feature_type const* features, int c
 	}
 	Node& node = nodes()[node_id];
 	node.counters[label] += 1;
-	node.fading_score = 1 + node.fading_score * nodes_fading_f;
+	node.fading_score += 1; //fading_score is decreased later
 	return node_id;
 }
 int count_fe_down(int const start_id, feature_type const* features) const{
@@ -1541,105 +1547,6 @@ int count_fe_down(int const start_id, feature_type const* features) const{
 	}
 	count += cnodes[node_id].forced_extend;
 	return count;
-}
-void generate_datapoint_from_tree(int const tree_id, feature_type* features, int& label) const{
-	int const root_id = tree_bases()[tree_id].root;
-	int selected_node = -1;
-	generate_datapoint_from_node(root_id, selected_node);
-	Node const& node = nodes()[selected_node];
-	double probabilities[label_count];
-	double sum = 0;
-	for(int i = 0; i < label_count; ++i){
-		probabilities[i] = node.counters[i];
-		sum += node.counters[i];
-	}
-
-	Utils::turn_array_into_probability(probabilities, label_count, sum);
-	label = Utils::pick_from_distribution<func>(probabilities, label_count);
-	for(int i = 0; i < feature_count; ++i){
-		double const r = func::rand_uniform();
-		features[i] = (r * (node.bound_upper[i] - node.bound_lower[i])) + node.bound_lower[i];
-	}
-}
-template<int max_stack_size=100>
-int generate_datapoint_from_node(int const start_id, int& selected_node) const{
-	//Initialize an array to keep track of where we have to go at each tree level.
-	//The max depth expected is MAX_DEPTH.
-	int stack[max_stack_size];
-	for(int i = 0; i < max_stack_size; ++i)
-		stack[i] = -1;
-
-	double sum_of_weights = 0;
-	double selected_weight = -1;
-	selected_node = -1;
-
-	int node_id = start_id;
-	int depth = 0;
-	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
-	//*i* count the number of node deleted.
-	int i = 0;
-	while(i < node_count && node_id >= 0){
-		Node const& node = nodes()[node_id];
-		if(!node.is_leaf()){  //Internal node
-			if (stack[depth] == -1){ //Go right
-				stack[depth] = 0;
-				depth += 1;
-				node_id = node.child_right;
-			}
-			else if (stack[depth] == 0){ //Go left
-				stack[depth] = 1;
-				depth += 1;
-				node_id = node.child_left;
-			}
-			else if (stack[depth] == 1){ //Go up
-				stack[depth] = -1; //Reset to -1
-				depth -= 1;
-				i += 1;
-				if(node_id == start_id)
-					break;
-				node_id = node.parent;
-			}
-		}
-		else{ //Leaf
-			stack[depth] = -1; //Reset to -1
-			depth -= 1;
-			i += 1;
-
-			double count = 0;
-			for(int i = 0; i < label_count; ++i){
-				count += static_cast<double>(node.counters[i]);
-			}
-			//-ln(r)/weight == r^(1/w) I tested it!!!
-			double const j = func::rand_uniform();
-			double const r = -(func::log(j)/count);
-			if(selected_node < 0 || r < selected_weight){
-				selected_node = node_id;
-				selected_weight = r;
-			}
-
-			if(node_id == start_id)
-				break;
-			node_id = node.parent;
-		}
-		if(depth >= max_stack_size)
-			return -1;
-	}
-	if(depth != -1)
-		return -1;
-	return 0;
-}
-void generate_tree_from_tree(int const src_tree, int const dst_tree){
-	feature_type features[feature_count];
-	int label;
-
-	int count = node_available;
-	if(generate_full_point)
-		count = count_data_point_tree(src_tree);
-
-	for(int i = 0; i < count; ++i){
-		generate_datapoint_from_tree(src_tree, features, label);
-		train_tree(features, label, dst_tree);
-	}
 }
 template<int max_stack_size=100>
 int count_dead_supply(int const start_id){
@@ -1706,65 +1613,6 @@ double count_dead_supply_tree(int const tree_id){
 	if(root < 0)
 		return 0;
 	return count_dead_supply(root);
-}
-template<int max_stack_size=100>
-int node_compress_tau(int const start_id, double const factor){
-	//Initialize an array to keep track of where we have to go at each tree level.
-	//The max depth expected is MAX_DEPTH.
-	int stack[max_stack_size];
-	for(int i = 0; i < max_stack_size; ++i)
-		stack[i] = -1;
-
-	int node_id = start_id;
-	int depth = 0;
-	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
-	//*i* count the number of node deleted.
-	int i = 0;
-	while(i < node_count && node_id >= 0){
-		Node& node = nodes()[node_id];
-		if(!node.is_leaf()){  //Internal node
-			if (stack[depth] == -1){ //Go right
-				stack[depth] = 0;
-				depth += 1;
-				node_id = node.child_right;
-				node.tau *= factor;
-			}
-			else if (stack[depth] == 0){ //Go left
-				stack[depth] = 1;
-				depth += 1;
-				node_id = node.child_left;
-			}
-			else if (stack[depth] == 1){ //Go up
-				stack[depth] = -1; //Reset to -1
-				depth -= 1;
-				i += 1;
-				if(node_id == start_id)
-					break;
-				node_id = node.parent;
-			}
-		}
-		else{ //Leaf
-			stack[depth] = -1; //Reset to -1
-			depth -= 1;
-			i += 1;
-			node.tau *= factor;
-
-			if(node_id == start_id)
-				break;
-			node_id = node.parent;
-		}
-		if(depth >= max_stack_size)
-			return -1;
-	}
-	if(depth != -1)
-		return -1;
-	return 0;
-}
-void tree_compress_tau(int const tree_id, double const factor){
-	int const root = tree_bases()[tree_id].root;
-	if(root < 0)
-		return;
-	node_compress_tau(root, factor);
 }
 template<int max_stack_size=100>
 int count_data_point_node(int const start_id){
@@ -1961,14 +1809,14 @@ int tree_trim(int const tree_id){
 					smallest_id = node_id;
 				}
 			}
-			else if(trim_type == TRIM_FADING){//Trim based on count
+			else if(trim_type == TRIM_FADING){//Trim based on a fading count
 				sum_count_leaves += node.fading_score;
 				if(smallest_count < 0 || node.fading_score < smallest_count || (node.fading_score == smallest_count && func::rand_uniform() < 0.5)){
 					smallest_count = node.fading_score;
 					smallest_id = node_id;
 				}
 			}
-			else if(trim_type == TRIM_RANDOM){//Trim based on count
+			else if(trim_type == TRIM_RANDOM){//Trim based on Reservoir Sampling
 				double const r = func::rand_uniform();
 
 				if(r < (1.0/leaf_count))
@@ -1981,9 +1829,65 @@ int tree_trim(int const tree_id){
 	}
 	if(depth != -1)
 		return -2;
-	if(trim_type != TRIM_RANDOM && sum_count_leaves > 0 && (smallest_count/sum_count_leaves) > maximum_trim_size)
+	if(sum_count_leaves > 0 && (smallest_count/sum_count_leaves) > maximum_trim_size)
 		return -3;
 	return smallest_id;
+}
+void tree_fade_counts(){
+	for(int i = 0; i < tree_count; ++i)
+		tree_fade_counts(i);
+}
+template<int max_stack_size=100>
+int tree_fade_counts(int const tree_id){
+	TreeBase const& base = tree_bases()[tree_id];
+	int const root_id = base.root;
+
+	//Initialize an array to keep track of where we have to go at each tree level.
+	//The max depth expected is MAX_DEPTH.
+	int stack[max_stack_size];
+	for(int i = 0; i < max_stack_size; ++i)
+		stack[i] = -1;
+
+	//Start at the root, then dive inside the tree
+	int node_id = root_id;
+	int depth = 0;
+	double smallest_count = -1;
+	int smallest_id = 0;
+	//a for loop instead of a while to avoid infinite loops. Since we don't expect to do more turn than node_count
+	int i = 0;
+	double leaf_count = 0;
+	double sum_count_leaves = 0;
+	while(i < node_count && node_id >= 0){
+		Node& node = nodes()[node_id];
+		if(!node.is_leaf()){  //Internal node
+			if (stack[depth] == -1){ //Go right
+				stack[depth] = 0;
+				depth += 1;
+				node_id = node.child_right;
+			}
+			else if (stack[depth] == 0){ //Go left
+				stack[depth] = 1;
+				depth += 1;
+				node_id = node.child_left;
+			}
+			else if (stack[depth] == 1){ //Go up
+				stack[depth] = -1; //Reset to -1
+				depth -= 1;
+				i += 1;
+				node_id = node.parent;
+			}
+		}
+		else{ //Leaf
+			stack[depth] = -1; //Reset to -1
+			depth -= 1;
+			i += 1;
+			node.fading_score = node.fading_score * nodes_fading_f;
+			node_id = node.parent;
+		}
+		if(depth >= max_stack_size)
+			return -1;
+	}
+	return 0;
 }
 private:
 void cut_block(int const node_id, int const tree_id){
@@ -2265,6 +2169,44 @@ void predict_tree(feature_type const* features, int const tree_id, double* poste
 		else
 			node_id = current_node.child_right;
 		depth += 1;
+	}
+}
+int get_leaf(int const tree_id, feature_type const* features) const{
+	int node_id = tree_bases()[tree_id].root;
+	if(node_id < 0)
+		return Node::EMPTY_NODE;
+
+	//Loop to find the leaf
+	while(true){
+		Node const& node = nodes()[node_id];
+		if(node.is_leaf())
+			return node_id;
+		//Choose a direction
+		if(features[node.split_dimension] > node.split_value)
+			node_id = node.child_right;
+		else
+			node_id = node.child_left;
+	}
+	return Node::EMPTY_NODE;
+}
+/**
+ * Update the label counters of an internal node based on the last data point.
+ * Faster to run because it only update the branch of the last data point.
+ * @param node_id The id of the node to update.
+ */
+void update_posterior_count(int const tree_id, feature_type const* features, int const label){
+	int node_id = get_leaf(tree_id, features);
+	int const leaf_id = node_id;
+	node_id = nodes()[node_id].parent;
+	while(node_id > 0 && node_id < node_count){
+		Node& node = nodes()[node_id];
+		int const c_left = Utils::min(1, nodes()[node.child_left].counters[label]);
+		int const c_right = Utils::min(1, nodes()[node.child_right].counters[label]);
+		node.counters[label] = c_left + c_right;
+		//TODO check validity of that if
+		//if(node.counters[i] == 2)
+			//break;
+		node_id = node.parent;
 	}
 }
 /**
@@ -2559,34 +2501,6 @@ bool tree_delete(int const tree_id){
 	node_count += freed_node;
 	tree_count -= 1;
 
-	return true;
-}
-bool tree_behead(int const tree_id){
-	int side = rand()%2;
-	TreeBase & base = tree_bases()[tree_id];
-	int const root_id = base.root;
-	if(root_id < 0)
-		return false;
-	Node& root = nodes()[root_id];
-
-	int node_id = -1;
-	int new_root = -1;
-	if(side == 0){
-		node_id = root.child_right;
-		new_root = root.child_left;
-	}
-	else{
-		node_id = root.child_left;
-		new_root = root.child_right;
-	}
-
-	if(node_id < 0)
-		return false;
-	node_reset(node_id);
-	root.reset();
-	node_available += 1;
-	base.root = new_root;
-	nodes()[new_root].parent = -1;
 	return true;
 }
 template<int max_stack_size=100>
@@ -3000,14 +2914,23 @@ bool train(feature_type const* features, int const label){
 	if(print_nodes){
 		scory(features, label);
 	}
+
+	static bool checked = false;
+	if(has_been_full > 1 && !checked){
+		cout << "Full memory!" << endl;
+		checked = true;
+	}
+	//Fade the count of the average point
 	for(int i = 0; i < feature_count; ++i)
 		sum_features[i] = sum_features[i]*fading_count + features[i];
 	count_points = count_points*fading_count + 1;
+
 	int tree_order[tree_count];
 	for(int i = 0; i < tree_count; ++i)
-		//tree_order[i] = (total_count+i)%tree_count;
 		tree_order[i] = i;
 
+	if(trim_type == TRIM_FADING)
+		tree_fade_counts();
 	if(trim_type != TRIM_NONE && node_available <= 1 && total_count%100 == 0){
 		tree_trim();
 	}
@@ -3015,6 +2938,7 @@ bool train(feature_type const* features, int const label){
 		bool has_trained = train_tree(features, label, tree_order[i]);
 		if(!has_trained)
 			fully_trained = false;
+		update_posterior_count(tree_order[i], features, label);
 	}
 	if(node_available <= 1)
 		has_been_full += 1;
@@ -3027,35 +2951,32 @@ bool train(feature_type const* features, int const label){
 	total_count += 1;
 	TreeBase* bases = tree_bases();
 	bool all_tree_grown = true;
-	for(int i = 0; i < tree_count; ++i){
-		int node_count = 0;
-		int depth = tree_depth(i, &node_count);
-		if(!bases[i].is_grown(tree_management))
-			all_tree_grown = false;
-		#ifdef DEBUG
-		double score_debug;
-		if(bases[i].statistics.ratio()){
-			score_debug = bases[i].statistics.score(false, bases[i].size);
-		}
-		else {
-			const std::type_info& ti1 = typeid(Statistic);
-			const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
-			if(ti1.hash_code() == ti2.hash_code()) //If RS
-				score_debug = bases[i].statistics.score(false, tree_count-1);
-			else
-				score_debug = bases[i].statistics.score(false);
-		}
-		//cout << "Score:" << total_count << "," << i << "," << score_debug << endl;
-		//if(total_count%50 == 0 && total_count > 0)
-			//cout << "Depth:" << total_count << "," << i << "," << depth << "," << node_count << endl;
-		#endif
-		if(size_type == DEPTH_SIZE){
-			bases[i].size = depth;
-		}
-		else if(size_type == NODE_SIZE){
-			bases[i].size = node_count;
-		}
-	}
+	//for(int i = 0; i < tree_count; ++i){
+		//int node_count = 0;
+		//int depth = tree_depth(i, &node_count);
+		//if(!bases[i].is_grown(tree_management))
+			//all_tree_grown = false;
+		//#ifdef DEBUG
+		//double score_debug;
+		//if(bases[i].statistics.ratio()){
+			//score_debug = bases[i].statistics.score(false, bases[i].size);
+		//}
+		//else {
+			//const std::type_info& ti1 = typeid(Statistic);
+			//const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
+			//if(ti1.hash_code() == ti2.hash_code()) //If RS
+				//score_debug = bases[i].statistics.score(false, tree_count-1);
+			//else
+				//score_debug = bases[i].statistics.score(false);
+		//}
+		//#endif
+		//if(size_type == DEPTH_SIZE){
+			//bases[i].size = depth;
+		//}
+		//else if(size_type == NODE_SIZE){
+			//bases[i].size = node_count;
+		//}
+	//}
     #ifdef DEBUG
 	cout << "Nodes remaining:" << total_count << "," << node_available << endl;
 	cout << "Tree count:" << tree_count << endl;
@@ -3064,7 +2985,7 @@ bool train(feature_type const* features, int const label){
 	if(print_nodes && ((total_count > 0 && total_count <= 500) || (total_count > 0 && total_count%5 == 0))){
 		printy();
 	}
-	if(node_available <= 1){
+	if(node_available <= 1){ //Remove trees
 		if(false && total_count > 0 && total_count%500 == 0 && tree_count < 5){
 			int const index_tree_base = max_size - tree_count * sizeof(TreeBase);
 			int const new_index_tree_base = index_tree_base - sizeof(TreeBase);
@@ -3110,108 +3031,6 @@ bool train(feature_type const* features, int const label){
 				bases[i].node_count_limit = node_per_trees + (i < remaining);
 		}
 	}
-	//if((node_available <= 1 || ((tree_management == COBBLE_MANAGEMENT || tree_management == ROBUR_MANAGEMENT) && all_tree_grown)) && dont_delete == DO_DELETE){
-		//count_full += 1;
-		//if(count_full > 100){
-			//count_full = 0;
-			//#ifdef DEBUG
-			//cout << "Direction:" << total_count << "," << (sum_direction/count_direction) << "," << sum_direction << endl;
-			//#endif
-			//if((sum_direction/count_direction) > 0){ //Count is more important
-				////Chop to depth -1 and pause them
-				//for(int i = 0; i < tree_count; ++i){
-					//int depth_i = tree_depth(i, nullptr);
-					//bases[i].node_count_limit = 0;
-					//if(depth_i > 2)
-						//tree_chop(i, depth_i-1);
-				//}
-				//if(node_available > 2)
-					//tree_add();
-			//}
-			//else if((sum_direction/count_direction) < 0){ //Depth is more important
-
-				//int idx_smallest_contribution = 0;
-				//for(int i = 0; i < tree_count; ++i){
-					//double contribution = bases[i].sum_contribution/bases[i].count_contribution;
-					//double best_contrib = bases[idx_smallest_contribution].sum_contribution/bases[idx_smallest_contribution].count_contribution;
-
-					//#ifdef DEBUG
-					//cout << "Contribution:" << total_count << "," << i << "," << contribution << endl;
-					//#endif
-					//if(contribution < best_contrib)
-						//idx_smallest_contribution = i;
-					//bases[i].node_count_limit = node_count;
-				//}
-				//if(tree_count > 2){
-					//#ifdef DEBUG
-					//cout << "Deleting:" << total_count << "," << idx_smallest_contribution << endl;
-					//#endif
-					//tree_delete(idx_smallest_contribution);
-				//}
-			//}
-			//for(int i = 0; i < tree_count; ++i){
-				//bases[i].sum_contribution = 0;
-				//bases[i].count_contribution = 0;
-			//}
-			//sum_direction = 0;
-			//count_direction = 0;
-		//}
-		//if(1==0){
-		//double scores[tree_count];
-		//double sum = 0;
-		//#ifdef DEBUG
-		//for(int i = 0; i < node_count; ++i){
-			//Node& node = nodes()[i];
-			//if(node.is_leaf()){
-				//int sum = 0;
-				//for(int l = 0; l < label_count; ++l)
-					//sum += node.counters[l];
-				////if(sum > 0)
-					////cout << "Leafy:" << total_count << "," << i << "," << sum << endl;
-			//}
-		//}
-		//#endif
-		//for(int i = 0; i < tree_count; ++i){
-			//if(tree_management == PAUSING_PHOENIX_MANAGEMENT)
-			//bases[i].node_count_limit = 0;
-			//if(bases[i].statistics.ratio())
-				//scores[i] = bases[i].statistics.score(false, bases[i].size);
-			//else
-			//{
-				//const std::type_info& ti1 = typeid(Statistic);
-				//const std::type_info& ti2 = typeid(ReservoirSamplingMetrics);
-				//if(ti1.hash_code() == ti2.hash_code()) //If RS
-					//scores[i] = bases[i].statistics.score(false, tree_count-1);
-				//else
-					//scores[i] = bases[i].statistics.score(false);
-			//}
-			//sum += scores[i];
-		//}
-		//Utils::turn_array_into_probability(scores, tree_count, sum);
-
-		//#ifdef DEBUG
-		//cout << "Picking numbers" << endl;
-		//for(int i = 0; i < tree_count; ++i){
-			//cout << scores[i] << " ";
-		//}
-		//cout << endl;
-		//#endif
-		//int const i = Utils::pick_from_distribution<func>(scores, tree_count);
-		//#ifdef DEBUG
-		//cout << "Deleting " << i << endl;
-		//#endif
-		//tree_reset(i);
-		//train_tree(features, label, i);
-		//last_tree_deleted = i;
-		//node_usage_on_ltd = node_available;
-
-		//}
-		//#ifdef DEBUG
-		////child_of(0);
-		////unravel<true>(0);
-		////tree_dd(0);
-		//#endif
-	//}
     #ifdef DEBUG
 	for(int i = 0; i < tree_count; ++i){
 		if(!tree_checker(i)){
@@ -3445,8 +3264,9 @@ int predict(feature_type const* features, double* scores = nullptr, int tree_to_
 	if(tree_to_use < 0)
 		tree_to_use = tree_count;
 	//Update internal count
-	if(extend_type != EXTEND_GHOST)
-		update_posterior_count();
+	//NOTE uncomment for bound and trim, just to be safer
+	//if(extend_type != EXTEND_GHOST)
+		//update_posterior_count();
 
 	//The posterior mean of the forest will be the average posterior means over all trees
 	//We start by computing the sum
