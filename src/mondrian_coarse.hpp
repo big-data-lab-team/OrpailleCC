@@ -366,7 +366,6 @@ void extend_block0(int const node_id, int const tree_id, feature_type const* fea
 		//NOTE Creates counters for the label of the new parent
 		for(int i = 0; i < label_count; ++i)
 			nodes()[new_parent].counters[i] = Utils::min(1, node.counters[i]);
-		//nodes()[new_parent].counters[label] = 1 + Utils::min(1, node.counters[label]);
 
 		//Creates counters for the label of the new sibling
 		for(int i = 0; i < label_count; ++i)
@@ -2938,7 +2937,9 @@ bool train(feature_type const* features, int const label){
 		bool has_trained = train_tree(features, label, tree_order[i]);
 		if(!has_trained)
 			fully_trained = false;
+        #ifdef UNBOUND_OPTIMIZE
 		update_posterior_count(tree_order[i], features, label);
+        #endif
 	}
 	if(node_available <= 1)
 		has_been_full += 1;
@@ -3265,9 +3266,10 @@ int predict(feature_type const* features, double* scores = nullptr, int tree_to_
 		tree_to_use = tree_count;
 	//Update internal count
 	//NOTE uncomment for bound and trim, just to be safer
-	//if(extend_type != EXTEND_GHOST)
-		//update_posterior_count();
-
+	#ifndef UNBOUND_OPTIMIZE
+	if(extend_type != EXTEND_GHOST)
+		update_posterior_count();
+	#endif
 	//The posterior mean of the forest will be the average posterior means over all trees
 	//We start by computing the sum
 	double tree_used = 0;
